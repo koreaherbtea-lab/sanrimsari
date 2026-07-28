@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>산림살이</title>
+  
+  <style>
+    :root {
+      --primary-color: #2e4a3b;
+      --primary-hover: #1e3227;
+      --accent-color: #a3e635;
+      --bg-color: #f4f6f3;
+      --card-bg: #ffffff;
+      --text-color: #2d3748;
+      --danger-bg: #fff5f5;
+      --danger-border: #f56565;
+      --danger-text: #c53030;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; }
+
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 2rem; background-color: var(--primary-color); color: white;
+      position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .logo { font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+    .menu-toggle { display: none; background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; }
+    
+    .nav-menu { display: flex; gap: 1.5rem; align-items: center; }
+    .nav-link { color: #e2e8f0; text-decoration: none; font-weight: 500; cursor: pointer; transition: color 0.2s; }
+    .nav-link:hover { color: var(--accent-color); }
+    .auth-btn { background-color: #4a5568; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+    @media (max-width: 768px) {
+      .menu-toggle { display: block; }
+      .nav-menu {
+        display: none; flex-direction: column; width: 100%; position: absolute;
+        top: 100%; left: 0; background-color: var(--primary-color); padding: 1.2rem; gap: 1rem;
+      }
+      .nav-menu.open { display: flex; }
+    }
+
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+    .section-title { font-size: 1.5rem; margin: 2rem 0 1rem; color: var(--primary-color); border-bottom: 2px solid #cbd5e0; padding-bottom: 0.5rem; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+    @media (max-width: 768px) { .card-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card-bg); border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06); padding: 1.5rem;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .card img { width: 100%; border-radius: 8px; height: 200px; object-fit: cover; margin-bottom: 1rem; }
+    .youtube-card iframe { width: 100%; height: 240px; border-radius: 8px; border: none; margin-bottom: 1rem; }
+
+    .like-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; position: relative; }
+    .like-btn {
+      background: #edf2f7; border: 1px solid #cbd5e0; padding: 0.4rem 0.8rem;
+      border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+    }
+    .like-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+    .like-btn .heart { color: #a0aec0; }
+    .like-btn.liked .heart { color: #e53e3e; }
+    
+    .toast-msg {
+      position: absolute; top: -35px; left: 0; background: rgba(0,0,0,0.8);
+      color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem;
+      opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+    }
+    .toast-msg.show { opacity: 1; visibility: visible; }
+
+    .warning-box {
+      background-color: var(--danger-bg); border-left: 4px solid var(--danger-border);
+      color: var(--danger-text); padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 4px;
+    }
+    .write-box, .admin-form {
+      background: var(--card-bg); padding: 1.2rem; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 1.5rem;
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .write-box input, .write-box textarea, .admin-form input, .admin-form textarea {
+      width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 6px;
+    }
+    .btn-submit { background-color: var(--primary-color); color: white; border: none; padding: 0.75rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 0.8rem; position: relative; }
+    .close-btn { position: absolute; right: 1.2rem; top: 1rem; font-size: 1.5rem; cursor: pointer; }
+    .google-btn { background-color: #4285f4; color: white; border: none; padding: 0.75rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+    footer { text-align: center; padding: 2rem 1rem; background: var(--primary-color); color: white; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo" onclick="showSection('home')">🌲 산림살이</div>
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <nav class="nav-menu" id="navMenu">
+      <a class="nav-link" onclick="showSection('intro')">소개</a>
+      <a class="nav-link" onclick="showSection('blog')">BLOG</a>
+      <a class="nav-link" onclick="showSection('youtube')">YOUTUBE</a>
+      <a class="nav-link" onclick="showSection('board')">소통창</a>
+      <a class="nav-link" id="memberBoardNav" style="display:none;" onclick="showSection('member-board')">회원소통창 🔒</a>
+      <button class="auth-btn" id="authBtn">로그인</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section id="home-section" class="page-section">
+      <h2 class="section-title">최신 소식 요약</h2>
+      <div class="card-grid" id="summaryGrid"></div>
+    </section>
+
+    <section id="intro-section" class="page-section" style="display:none;">
+      <h2 class="section-title">소개</h2>
+      <div class="card">
+        <h3>🌲 산림살이에 오신 것을 환영합니다</h3>
+        <p>자연 속에서의 삶, 숲이 주는 여유와 이야기를 기록하는 공간입니다.</p>
+      </div>
+    </section>
+
+    <section id="blog-section" class="page-section" style="display:none;">
+      <h2 class="section-title">BLOG</h2>
+      <div class="admin-form" id="blogAdminForm" style="display:none;">
+        <h3>✍️ 새 블로그 글 작성 (관리자)</h3>
+        <input type="text" id="blogTitleInput" placeholder="제목">
+        <textarea id="blogContentInput" placeholder="내용"></textarea>
+        <button class="btn-submit" id="saveBlogBtn">등록</button>
+      </div>
+      <div class="card-grid" id="blogList"></div>
+    </section>
+
+    <section id="youtube-section" class="page-section" style="display:none;">
+      <h2 class="section-title">YOUTUBE</h2>
+      <div class="admin-form" id="youtubeAdminForm" style="display:none;">
+        <h3>🎬 유튜브 링크 등록 (관리자)</h3>
+        <input type="text" id="ytTitleInput" placeholder="영상 제목">
+        <input type="text" id="ytUrlInput" placeholder="Embed 링크">
+        <button class="btn-submit" id="saveYtBtn">등록</button>
+      </div>
+      <div class="card-grid" id="youtubeList"></div>
+    </section>
+
+    <section id="board-section" class="page-section" style="display:none;">
+      <h2 class="section-title">소통창</h2>
+      <div class="warning-box">⚠️ 광고, 혐오 등 부적절한 글은 삭제될 수 있습니다.</div>
+      <div class="write-box">
+        <input type="text" id="publicAuthor" placeholder="작성자 이름">
+        <textarea id="publicMemo" placeholder="따뜻한 글을 남겨주세요"></textarea>
+        <button class="btn-submit" id="postPublicBtn">글 남기기</button>
+      </div>
+      <div id="publicBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
+    </section>
+
+    <section id="member-board-section" class="page-section" style="display:none;">
+      <h2 class="section-title">회원소통창 🔒</h2>
+      <div class="warning-box">⚠️ 광고, 혐오 등 부적절한 글은 삭제될 수 있습니다.</div>
+      <div class="write-box">
+        <textarea id="memberMemo" placeholder="회원 전용 소통 공간입니다."></textarea>
+        <button class="btn-submit" id="postMemberBtn">회원 글 남기기</button>
+      </div>
+      <div id="memberBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
+    </section>
+  </main>
+
+  <div class="modal" id="loginModal">
+    <div class="modal-content">
+      <span class="close-btn" id="closeLoginModal">&times;</span>
+      <h3>로그인</h3>
+      <input type="email" id="loginEmail" placeholder="이메일">
+      <input type="password" id="loginPassword" placeholder="비밀번호">
+      <button class="btn-submit" id="emailLoginBtn">로그인</button>
+      <button class="google-btn" id="googleLoginBtn">Google 로그인</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="visitor-counter">
+      오늘 방문자: <strong id="todayVisitors">0</strong>명 | 누적 방문자: <strong id="totalVisitors">0</strong>명
+    </div>
+    <p>© 산림살이. All rights reserved.</p>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // 파이어베이스 실제 설정 연결
+    const firebaseConfig = {
+      apiKey: "AIzaSyBooX0LMC0KM8Tzl_i1ptcQuvl_uGTySto",
+      authDomain: "sanrimsari.firebaseapp.com",
+      projectId: "sanrimsari",
+      storageBucket: "sanrimsari.firebasestorage.app",
+      messagingSenderId: "595784005921",
+      appId: "1:595784005921:web:a6014846b4b81871daa660"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const googleProvider = new GoogleAuthProvider();
+
+    let currentUser = null;
+
+    document.getElementById('menuToggle').onclick = () => document.getElementById('navMenu').classList.toggle('open');
+
+    window.showSection = function(id) {
+      document.querySelectorAll('.page-section').forEach(s => s.style.display = 'none');
+      document.getElementById(`${id}-section`).style.display = 'block';
+      document.getElementById('navMenu').classList.remove('open');
+    };
+
+    window.handleLike = async function(btn, docId) {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.classList.add('liked');
+      btn.querySelector('.heart').textContent = '❤️';
+      const count = btn.querySelector('.count');
+      count.textContent = parseInt(count.textContent) + 1;
+      const toast = btn.parentElement.querySelector('.toast-msg');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1500);
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      const authBtn = document.getElementById('authBtn');
+      const memberNav = document.getElementById('memberBoardNav');
+      if (user) {
+        authBtn.textContent = '로그아웃';
+        memberNav.style.display = 'inline-block';
+        loadMemberBoard();
+      } else {
+        authBtn.textContent = '로그인';
+        memberNav.style.display = 'none';
+      }
+    });
+
+    document.getElementById('authBtn').onclick = () => {
+      if (currentUser) signOut(auth);
+      else document.getElementById('loginModal').classList.add('active');
+    };
+    document.getElementById('closeLoginModal').onclick = () => document.getElementById('loginModal').classList.remove('active');
+    document.getElementById('googleLoginBtn').onclick = () => {
+      signInWithPopup(auth, googleProvider).then(() => document.getElementById('loginModal').classList.remove('active'));
+    };
+
+    document.getElementById('postPublicBtn').onclick = async () => {
+      const author = document.getElementById('publicAuthor').value || "익명";
+      const content = document.getElementById('publicMemo').value;
+      if (!content) return alert("내용을 입력하세요.");
+      await addDoc(collection(db, "publicMemos"), { author, content, createdAt: serverTimestamp() });
+      document.getElementById('publicMemo').value = '';
+      loadPublicBoard();
+    };
+
+    async function loadPublicBoard() {
+      const container = document.getElementById('publicBoardList');
+      container.innerHTML = '';
+      const q = query(collection(db, "publicMemos"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      snap.forEach(d => {
+        const data = d.data();
+        const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
+        container.innerHTML += `<div class="card"><p><strong>${data.author}</strong> <small>(${time})</small></p><p>${data.content}</p></div>`;
+      });
+    }
+
+    async function loadMemberBoard() {
+      const container = document.getElementById('memberBoardList');
+      container.innerHTML = '';
+      const q = query(collection(db, "memberMemos"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      snap.forEach(d => {
+        const data = d.data();
+        const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
+        container.innerHTML += `<div class="card"><p><strong>${data.author} (회원)</strong> <small>(${time})</small></p><p>${data.content}</p></div>`;
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('todayVisitors').textContent = 38;
+      document.getElementById('totalVisitors').textContent = 1520;
+      loadPublicBoard();
+    });
+  </script>
+</body>
+</html>

@@ -350,7 +350,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
       getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, 
-      createUserWithEmailAndPassword, onAuthStateChanged, signOut 
+      createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
       getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp, deleteDoc, doc, getDoc, setDoc 
@@ -379,13 +379,14 @@
       }[c]));
     }
 
-    function getAnonId() {
-      let id = localStorage.getItem('sanrimsari_anon_id');
-      if (!id) {
-        id = 'anon_' + Math.random().toString(36).substring(2, 10);
-        localStorage.setItem('sanrimsari_anon_id', id);
-      }
-      return id;
+    // 💡 방문자(비로그인) 식별용 Firebase 익명 인증(Anonymous Auth) uid.
+    // 예전에는 localStorage에 아무 문자열이나 저장해 "내 글"을 구분했는데, 이 값은 서버가 진위를
+    // 검증할 수 없어 Firestore 보안 규칙으로 "본인 글만 삭제"를 안전하게 강제할 수 없었습니다.
+    // 익명 인증을 쓰면 Firebase가 서명한 uid가 부여되어 서버(Firestore 규칙)가 검증할 수 있습니다.
+    async function ensureAnonAuth() {
+      if (auth.currentUser) return auth.currentUser.uid;
+      const result = await signInAnonymously(auth);
+      return result.user.uid;
     }
 
     // 💡 유튜브 링크 자동 변환 함수
@@ -534,6 +535,16 @@
       if (processingAuth) return;
 
       if (!user) {
+        // 방문자 식별을 위해 조용히(화면 변화 없이) 익명 인증을 시도합니다.
+        // 성공하면 이 콜백이 익명 사용자와 함께 다시 호출됩니다.
+        signInAnonymously(auth).catch((e) => console.error("익명 인증 실패:", e));
+        resetUIToLoggedOut();
+        renderSampleOrData();
+        return;
+      }
+
+      // 익명 인증 사용자는 "글 작성자 식별"용일 뿐, 회원/관리자 승인 로직과는 무관합니다.
+      if (user.isAnonymous) {
         resetUIToLoggedOut();
         renderSampleOrData();
         return;
@@ -768,7 +779,7 @@
       btn.textContent = "저장 중...";
       try {
         const imageUrl = await processImageFile(imageFile);
-        const uid = currentUser ? currentUser.uid : getAnonId();
+        const uid = currentUser ? currentUser.uid : await ensureAnonAuth();
         await addDoc(collection(db, "publicMemos"), { author, content, uid, imageUrl, createdAt: serverTimestamp() });
         document.getElementById('publicMemo').value = '';
         document.getElementById('publicImageInput').value = '';
@@ -843,13 +854,13 @@
       try {
         const q = query(collection(db, "publicMemos"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
-        const myAnonId = getAnonId();
+        const myUid = auth.currentUser ? auth.currentUser.uid : null;
         const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
         let boardHTML = '';
         snap.forEach(d => {
           const data = d.data();
           const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
-          const isMyPost = (currentUser && currentUser.uid === data.uid) || (!currentUser && myAnonId === data.uid);
+          const isMyPost = myUid && myUid === data.uid;
           const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deletePublicMemo('${d.id}')">삭제</button>` : '';
           const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
           boardHTML += `
@@ -1073,7 +1084,7 @@
               ${deleteBtnHTML}
             </div>
             ${imgSrc ? `<img src="${escapeHTML(imgSrc)}" class="blog-card-image" alt="이미지">` : ''}
-            ${ytEmbed ? `<iframe src="${escapeHTML(ytEmbed)}" title="${safeTitle}" allowfullscreen></iframe>` : ''}
+            ${ytEmbed ? `<iframe src="${escapeHTML(ytEmbed)}" title="${safeTitle}" loading="lazy" frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>` : ''}
             ${body ? `<p style="font-size:1rem; color:#4a5568; margin-top:0.5rem;">${escapeHTML(body)}</p>` : ''}
           </div>
           <div class="like-container">

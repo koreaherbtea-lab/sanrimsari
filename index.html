@@ -6,6 +6,7 @@
   <title>산림살이</title>
   
   <style>
+    /* 1. 디자인 시스템 & 반응형 스타일 */
     :root {
       --primary-color: #2e4a3b;
       --primary-hover: #1e3227;
@@ -21,6 +22,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; }
 
+    /* 헤더 & 내비게이션 바 */
     .header {
       display: flex; justify-content: space-between; align-items: center;
       padding: 1rem 2rem; background-color: var(--primary-color); color: white;
@@ -43,12 +45,14 @@
       .nav-menu.open { display: flex; }
     }
 
+    /* 레이아웃 & PC 2*2 격자 / 모바일 1열 */
     .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
     .section-title { font-size: 1.5rem; margin: 2rem 0 1rem; color: var(--primary-color); border-bottom: 2px solid #cbd5e0; padding-bottom: 0.5rem; }
 
     .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
     @media (max-width: 768px) { .card-grid { grid-template-columns: 1fr; } }
 
+    /* 카드 스타일 */
     .card {
       background: var(--card-bg); border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.06); padding: 1.5rem;
@@ -57,6 +61,7 @@
     .card img { width: 100%; border-radius: 8px; height: 200px; object-fit: cover; margin-bottom: 1rem; }
     .youtube-card iframe { width: 100%; height: 240px; border-radius: 8px; border: none; margin-bottom: 1rem; }
 
+    /* 좋아요 버튼 & 토스트 애니메이션 */
     .like-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; position: relative; }
     .like-btn {
       background: #edf2f7; border: 1px solid #cbd5e0; padding: 0.4rem 0.8rem;
@@ -73,9 +78,10 @@
     }
     .toast-msg.show { opacity: 1; visibility: visible; }
 
+    /* 경고창 & 폼 */
     .warning-box {
       background-color: var(--danger-bg); border-left: 4px solid var(--danger-border);
-      color: var(--danger-text); padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 4px;
+      color: var(--danger-text); padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 4px; font-size: 0.9rem;
     }
     .write-box, .admin-form {
       background: var(--card-bg); padding: 1.2rem; border-radius: 12px;
@@ -83,21 +89,25 @@
       display: flex; flex-direction: column; gap: 0.8rem;
     }
     .write-box input, .write-box textarea, .admin-form input, .admin-form textarea {
-      width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 6px;
+      width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem;
     }
     .btn-submit { background-color: var(--primary-color); color: white; border: none; padding: 0.75rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .btn-submit:hover { background-color: var(--primary-hover); }
 
+    /* 모달 창 */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
     .modal.active { display: flex; }
     .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 0.8rem; position: relative; }
-    .close-btn { position: absolute; right: 1.2rem; top: 1rem; font-size: 1.5rem; cursor: pointer; }
+    .close-btn { position: absolute; right: 1.2rem; top: 1rem; font-size: 1.5rem; cursor: pointer; color: #a0aec0; }
     .google-btn { background-color: #4285f4; color: white; border: none; padding: 0.75rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-    footer { text-align: center; padding: 2rem 1rem; background: var(--primary-color); color: white; margin-top: 4rem; }
+    /* 푸터 */
+    footer { text-align: center; padding: 2rem 1rem; background: var(--primary-color); color: white; margin-top: 4rem; font-size: 0.9rem; }
   </style>
 </head>
 <body>
 
+  <!-- 헤더 -->
   <header class="header">
     <div class="logo" onclick="showSection('home')">🌲 산림살이</div>
     <button class="menu-toggle" id="menuToggle">☰</button>
@@ -111,88 +121,109 @@
     </nav>
   </header>
 
+  <!-- 메인 영역 -->
   <main class="container">
+    
+    <!-- 홈 섹션 -->
     <section id="home-section" class="page-section">
       <h2 class="section-title">최신 소식 요약</h2>
       <div class="card-grid" id="summaryGrid"></div>
     </section>
 
+    <!-- 소개 섹션 -->
     <section id="intro-section" class="page-section" style="display:none;">
       <h2 class="section-title">소개</h2>
       <div class="card">
         <h3>🌲 산림살이에 오신 것을 환영합니다</h3>
-        <p>자연 속에서의 삶, 숲이 주는 여유와 이야기를 기록하는 공간입니다.</p>
+        <p style="margin-top:0.5rem;">자연 속에서의 삶, 숲이 주는 여유와 조용한 이야기를 기록하고 공유하는 블로그 공간입니다.</p>
       </div>
     </section>
 
+    <!-- 블로그 섹션 -->
     <section id="blog-section" class="page-section" style="display:none;">
       <h2 class="section-title">BLOG</h2>
       <div class="admin-form" id="blogAdminForm" style="display:none;">
-        <h3>✍️ 새 블로그 글 작성 (관리자)</h3>
-        <input type="text" id="blogTitleInput" placeholder="제목">
-        <textarea id="blogContentInput" placeholder="내용"></textarea>
-        <button class="btn-submit" id="saveBlogBtn">등록</button>
+        <h3>✍️ 새 블로그 글 작성 (관리자 전용)</h3>
+        <input type="text" id="blogTitleInput" placeholder="제목을 입력하세요">
+        <textarea id="blogContentInput" placeholder="내용을 작성하세요"></textarea>
+        <button class="btn-submit" id="saveBlogBtn">글 등록하기</button>
       </div>
       <div class="card-grid" id="blogList"></div>
     </section>
 
+    <!-- 유튜브 섹션 -->
     <section id="youtube-section" class="page-section" style="display:none;">
       <h2 class="section-title">YOUTUBE</h2>
       <div class="admin-form" id="youtubeAdminForm" style="display:none;">
-        <h3>🎬 유튜브 링크 등록 (관리자)</h3>
+        <h3>🎬 유튜브 링크 등록 (관리자 전용)</h3>
         <input type="text" id="ytTitleInput" placeholder="영상 제목">
-        <input type="text" id="ytUrlInput" placeholder="Embed 링크">
-        <button class="btn-submit" id="saveYtBtn">등록</button>
+        <input type="text" id="ytUrlInput" placeholder="유튜브 Embed 링크 (예: https://www.youtube.com/embed/...)">
+        <button class="btn-submit" id="saveYtBtn">영상 등록하기</button>
       </div>
       <div class="card-grid" id="youtubeList"></div>
     </section>
 
+    <!-- 일반 소통창 -->
     <section id="board-section" class="page-section" style="display:none;">
       <h2 class="section-title">소통창</h2>
-      <div class="warning-box">⚠️ 광고, 혐오 등 부적절한 글은 삭제될 수 있습니다.</div>
+      <div class="warning-box">
+        ⚠️ 광고, 혐오, 비방 등 부적절한 글은 사전 통보 없이 삭제될 수 있습니다.
+      </div>
       <div class="write-box">
         <input type="text" id="publicAuthor" placeholder="작성자 이름">
-        <textarea id="publicMemo" placeholder="따뜻한 글을 남겨주세요"></textarea>
+        <textarea id="publicMemo" placeholder="따뜻한 한 마디를 남겨주세요"></textarea>
         <button class="btn-submit" id="postPublicBtn">글 남기기</button>
       </div>
       <div id="publicBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
     </section>
 
+    <!-- 회원 소통창 -->
     <section id="member-board-section" class="page-section" style="display:none;">
       <h2 class="section-title">회원소통창 🔒</h2>
-      <div class="warning-box">⚠️ 광고, 혐오 등 부적절한 글은 삭제될 수 있습니다.</div>
+      <div class="warning-box">
+        ⚠️ 광고, 혐오, 비방 등 부적절한 글은 사전 통보 없이 삭제될 수 있습니다.
+      </div>
       <div class="write-box">
-        <textarea id="memberMemo" placeholder="회원 전용 소통 공간입니다."></textarea>
+        <textarea id="memberMemo" placeholder="회원들만의 도란도란 이야기를 남겨보세요."></textarea>
         <button class="btn-submit" id="postMemberBtn">회원 글 남기기</button>
       </div>
       <div id="memberBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
     </section>
+
   </main>
 
+  <!-- 로그인 모달 -->
   <div class="modal" id="loginModal">
     <div class="modal-content">
       <span class="close-btn" id="closeLoginModal">&times;</span>
-      <h3>로그인</h3>
-      <input type="email" id="loginEmail" placeholder="이메일">
+      <h3 style="margin-bottom:0.5rem;">로그인</h3>
+      <input type="email" id="loginEmail" placeholder="이메일 아이디">
       <input type="password" id="loginPassword" placeholder="비밀번호">
       <button class="btn-submit" id="emailLoginBtn">로그인</button>
-      <button class="google-btn" id="googleLoginBtn">Google 로그인</button>
+      <button class="google-btn" id="googleLoginBtn">Google 계정으로 로그인</button>
     </div>
   </div>
 
+  <!-- 푸터 -->
   <footer>
     <div class="visitor-counter">
-      오늘 방문자: <strong id="todayVisitors">0</strong>명 | 누적 방문자: <strong id="totalVisitors">0</strong>명
+      오늘 방문자 수: <strong id="todayVisitors">0</strong>명 | 누적 방문자 수: <strong id="totalVisitors">0</strong>명
     </div>
     <p>© 산림살이. All rights reserved.</p>
   </footer>
 
+  <!-- 자바스크립트 및 파이어베이스 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { 
+      getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, 
+      onAuthStateChanged, signOut 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { 
+      getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc, increment 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 파이어베이스 실제 설정 연결
+    // 1. 파이어베이스 설정
     const firebaseConfig = {
       apiKey: "AIzaSyBooX0LMC0KM8Tzl_i1ptcQuvl_uGTySto",
       authDomain: "sanrimsari.firebaseapp.com",
@@ -202,6 +233,9 @@
       appId: "1:595784005921:web:a6014846b4b81871daa660"
     };
 
+    // 2. 관리자 이메일 지정
+    const ADMIN_EMAIL = "koreaherbtea@gmail.com";
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
@@ -209,14 +243,18 @@
 
     let currentUser = null;
 
+    // 모바일 토글
     document.getElementById('menuToggle').onclick = () => document.getElementById('navMenu').classList.toggle('open');
 
+    // 메뉴 전환
     window.showSection = function(id) {
       document.querySelectorAll('.page-section').forEach(s => s.style.display = 'none');
-      document.getElementById(`${id}-section`).style.display = 'block';
+      const target = document.getElementById(`${id}-section`);
+      if(target) target.style.display = 'block';
       document.getElementById('navMenu').classList.remove('open');
     };
 
+    // 좋아요 버튼 함수
     window.handleLike = async function(btn, docId) {
       if (btn.disabled) return;
       btn.disabled = true;
@@ -229,65 +267,163 @@
       setTimeout(() => toast.classList.remove('show'), 1500);
     };
 
+    // 로그인 감지 및 관리자 폼 노출
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
       const authBtn = document.getElementById('authBtn');
       const memberNav = document.getElementById('memberBoardNav');
+      const blogAdminForm = document.getElementById('blogAdminForm');
+      const youtubeAdminForm = document.getElementById('youtubeAdminForm');
+
       if (user) {
         authBtn.textContent = '로그아웃';
-        memberNav.style.display = 'inline-block';
+        if (memberNav) memberNav.style.display = 'inline-block';
+        
+        if (user.email === ADMIN_EMAIL) {
+          if(blogAdminForm) blogAdminForm.style.display = 'flex';
+          if(youtubeAdminForm) youtubeAdminForm.style.display = 'flex';
+        }
+
         loadMemberBoard();
       } else {
         authBtn.textContent = '로그인';
-        memberNav.style.display = 'none';
+        if (memberNav) memberNav.style.display = 'none';
+        if(blogAdminForm) blogAdminForm.style.display = 'none';
+        if(youtubeAdminForm) youtubeAdminForm.style.display = 'none';
       }
     });
 
+    // 로그인 모달
     document.getElementById('authBtn').onclick = () => {
-      if (currentUser) signOut(auth);
-      else document.getElementById('loginModal').classList.add('active');
-    };
-    document.getElementById('closeLoginModal').onclick = () => document.getElementById('loginModal').classList.remove('active');
-    document.getElementById('googleLoginBtn').onclick = () => {
-      signInWithPopup(auth, googleProvider).then(() => document.getElementById('loginModal').classList.remove('active'));
+      if (currentUser) {
+        signOut(auth).then(() => alert("로그아웃 되었습니다."));
+      } else {
+        document.getElementById('loginModal').classList.add('active');
+      }
     };
 
+    document.getElementById('closeLoginModal').onclick = () => {
+      document.getElementById('loginModal').classList.remove('active');
+    };
+
+    // 이메일 로그인
+    document.getElementById('emailLoginBtn').onclick = () => {
+      const email = document.getElementById('loginEmail').value;
+      const pass = document.getElementById('loginPassword').value;
+
+      if (!email || !pass) return alert("이메일과 비밀번호를 입력하세요.");
+
+      signInWithEmailAndPassword(auth, email, pass)
+        .then(() => {
+          alert("로그인 성공!");
+          document.getElementById('loginModal').classList.remove('active');
+        })
+        .catch((err) => {
+          alert("로그인 실패: " + err.message);
+        });
+    };
+
+    // Google 로그인
+    document.getElementById('googleLoginBtn').onclick = () => {
+      signInWithPopup(auth, googleProvider)
+        .then(() => {
+          alert("Google 로그인 성공!");
+          document.getElementById('loginModal').classList.remove('active');
+        })
+        .catch((err) => alert("Google 로그인 실패: " + err.message));
+    };
+
+    // 소통창 등록
     document.getElementById('postPublicBtn').onclick = async () => {
       const author = document.getElementById('publicAuthor').value || "익명";
       const content = document.getElementById('publicMemo').value;
       if (!content) return alert("내용을 입력하세요.");
-      await addDoc(collection(db, "publicMemos"), { author, content, createdAt: serverTimestamp() });
-      document.getElementById('publicMemo').value = '';
-      loadPublicBoard();
+
+      try {
+        await addDoc(collection(db, "publicMemos"), { author, content, createdAt: serverTimestamp() });
+        document.getElementById('publicMemo').value = '';
+        loadPublicBoard();
+      } catch(e) { alert("글 저장 실패: " + e.message); }
     };
 
+    document.getElementById('postMemberBtn').onclick = async () => {
+      const content = document.getElementById('memberMemo').value;
+      if (!content) return alert("내용을 입력하세요.");
+
+      try {
+        await addDoc(collection(db, "memberMemos"), {
+          author: currentUser.displayName || currentUser.email.split('@')[0],
+          content, createdAt: serverTimestamp()
+        });
+        document.getElementById('memberMemo').value = '';
+        loadMemberBoard();
+      } catch(e) { alert("글 저장 실패: " + e.message); }
+    };
+
+    // 소통창 GET
     async function loadPublicBoard() {
       const container = document.getElementById('publicBoardList');
+      if (!container) return;
       container.innerHTML = '';
-      const q = query(collection(db, "publicMemos"), orderBy("createdAt", "desc"));
-      const snap = await getDocs(q);
-      snap.forEach(d => {
-        const data = d.data();
-        const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
-        container.innerHTML += `<div class="card"><p><strong>${data.author}</strong> <small>(${time})</small></p><p>${data.content}</p></div>`;
-      });
+      try {
+        const q = query(collection(db, "publicMemos"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        snap.forEach(d => {
+          const data = d.data();
+          const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
+          container.innerHTML += `<div class="card"><p><strong>${data.author}</strong> <small>(${time})</small></p><p>${data.content}</p></div>`;
+        });
+      } catch(e) { console.log(e); }
     }
 
     async function loadMemberBoard() {
       const container = document.getElementById('memberBoardList');
+      if (!container) return;
       container.innerHTML = '';
-      const q = query(collection(db, "memberMemos"), orderBy("createdAt", "desc"));
-      const snap = await getDocs(q);
-      snap.forEach(d => {
-        const data = d.data();
-        const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
-        container.innerHTML += `<div class="card"><p><strong>${data.author} (회원)</strong> <small>(${time})</small></p><p>${data.content}</p></div>`;
-      });
+      try {
+        const q = query(collection(db, "memberMemos"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        snap.forEach(d => {
+          const data = d.data();
+          const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
+          container.innerHTML += `<div class="card"><p><strong>${data.author} (회원)</strong> <small>(${time})</small></p><p>${data.content}</p></div>`;
+        });
+      } catch(e) { console.log(e); }
+    }
+
+    // 초기 카드 UI 로딩
+    function createCardHTML(title, body, imgSrc, ytEmbed, likes = 0) {
+      return `
+        <div class="card ${ytEmbed ? 'youtube-card' : ''}">
+          <div>
+            ${imgSrc ? `<img src="${imgSrc}" alt="이미지">` : ''}
+            ${ytEmbed ? `<iframe src="${ytEmbed}" allowfullscreen></iframe>` : ''}
+            <h3>${title}</h3>
+            <p style="font-size:0.9rem; color:#4a5568; margin-top:0.5rem;">${body}</p>
+          </div>
+          <div class="like-container">
+            <span class="toast-msg">눌렀어요</span>
+            <button class="like-btn" onclick="handleLike(this)">
+              <span class="heart">🤍</span> 좋아요 <span class="count">${likes}</span>
+            </button>
+          </div>
+        </div>
+      `;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('todayVisitors').textContent = 38;
-      document.getElementById('totalVisitors').textContent = 1520;
+      document.getElementById('todayVisitors').textContent = 45;
+      document.getElementById('totalVisitors').textContent = 1620;
+
+      const blog1 = createCardHTML("🌲 숲속에서의 첫 아침", "새소리와 함께 시작하는 산림살이 이야기...", "https://picsum.photos/400/250?random=1", null, 12);
+      const blog2 = createCardHTML("🌲 자연 속 힐링 스팟", "깊은 산속 오솔길을 따라 걷다 발견한 명소...", "https://picsum.photos/400/250?random=2", null, 8);
+      const yt1 = createCardHTML("🎥 숲속의 소리 4K", "ASMR 힐링 영상입니다.", null, "https://www.youtube.com/embed/dQw4w9WgXcQ", 25);
+      const yt2 = createCardHTML("🎥 통나무집 짓기", "자연 친화적 건축 일지", null, "https://www.youtube.com/embed/dQw4w9WgXcQ", 19);
+
+      document.getElementById('summaryGrid').innerHTML = blog1 + blog2 + yt1 + yt2;
+      document.getElementById('blogList').innerHTML = blog1 + blog2;
+      document.getElementById('youtubeList').innerHTML = yt1 + yt2;
+
       loadPublicBoard();
     });
   </script>

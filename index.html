@@ -32,9 +32,13 @@
     .menu-toggle { display: none; background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; }
     
     .nav-menu { display: flex; gap: 1.5rem; align-items: center; }
-    .nav-link { color: #e2e8f0; text-decoration: none; font-weight: 500; cursor: pointer; transition: color 0.2s; }
-    .nav-link:hover { color: var(--accent-color); }
+    .nav-link {
+      color: #e2e8f0; text-decoration: none; font-weight: 500; cursor: pointer; transition: color 0.2s;
+      background: none; border: none; font-size: 1rem; font-family: inherit; padding: 0;
+    }
+    .nav-link:hover, .nav-link:focus-visible { color: var(--accent-color); outline: none; }
     .auth-btn { background-color: #4a5568; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .text-link { background: none; border: none; color: var(--primary-color); font-weight: bold; cursor: pointer; text-decoration: underline; font-size: 0.9rem; padding: 0; align-self: center; }
 
     @media (max-width: 768px) {
       .menu-toggle { display: block; }
@@ -169,14 +173,15 @@
 
   <!-- 헤더 -->
   <header class="header">
-    <div class="logo" onclick="showSection('home')">🌲 산림살이</div>
+    <div class="logo" role="button" tabindex="0" onclick="showSection('home')" onkeypress="if(event.key==='Enter'||event.key===' ')showSection('home')">🌲 산림살이</div>
     <button class="menu-toggle" id="menuToggle">☰</button>
     <nav class="nav-menu" id="navMenu">
-      <a class="nav-link" onclick="showSection('intro')">소개</a>
-      <a class="nav-link" onclick="showSection('blog')">BLOG</a>
-      <a class="nav-link" onclick="showSection('youtube')">YOUTUBE</a>
-      <a class="nav-link" onclick="showSection('board')">소통창</a>
-      <a class="nav-link" id="memberBoardNav" style="display:none;" onclick="showSection('member-board')">회원소통창 🔒</a>
+      <button class="nav-link" onclick="showSection('intro')">소개</button>
+      <button class="nav-link" onclick="showSection('blog')">BLOG</button>
+      <button class="nav-link" onclick="showSection('youtube')">YOUTUBE</button>
+      <button class="nav-link" onclick="showSection('board')">소통창</button>
+      <button class="nav-link" id="memberBoardNav" style="display:none;" onclick="showSection('member-board')">회원소통창 🔒</button>
+      <button class="nav-link" id="adminApprovalNav" style="display:none;" onclick="showSection('admin-approval')">가입승인관리 🔧</button>
       <button class="auth-btn" id="authBtn">로그인</button>
     </nav>
   </header>
@@ -275,6 +280,15 @@
       <div id="memberBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
     </section>
 
+    <!-- 회원가입 승인 관리 (관리자 전용) -->
+    <section id="admin-approval-section" class="page-section" style="display:none;">
+      <h2 class="section-title">회원가입 승인 관리</h2>
+      <div class="warning-box">
+        ℹ️ 신규 가입 신청 목록입니다. 승인 시 회원소통창 이용이 가능해집니다. '거절'은 가입 신청 정보만 삭제하며, 별도로 Firebase 콘솔에서 인증 계정을 정리해야 완전히 제거됩니다.
+      </div>
+      <div id="pendingUsersList" style="display:flex; flex-direction:column; gap:1rem;"></div>
+    </section>
+
   </main>
 
   <!-- 로그인 모달 -->
@@ -282,11 +296,44 @@
     <div class="modal-content">
       <span class="close-btn" id="closeLoginModal">&times;</span>
       <h3 style="margin-bottom:0.5rem;">로그인</h3>
-      <input type="email" id="loginEmail" placeholder="이메일 아이디" autocomplete="off">
-      <input type="password" id="loginPassword" placeholder="비밀번호" autocomplete="new-password">
+      <input type="email" id="loginEmail" placeholder="이메일 아이디" autocomplete="username">
+      <input type="password" id="loginPassword" placeholder="비밀번호" autocomplete="current-password">
       
       <button class="btn-submit" id="emailLoginBtn">이메일로 로그인</button>
       <button class="google-btn" id="googleLoginBtn">Google 계정으로 로그인</button>
+      <button class="text-link" id="openSignupBtn">아직 회원이 아니신가요? 회원가입 신청</button>
+    </div>
+  </div>
+
+  <!-- 회원가입 모달 -->
+  <div class="modal" id="signupModal">
+    <div class="modal-content">
+      <span class="close-btn" id="closeSignupModal">&times;</span>
+      <h3 style="margin-bottom:0.5rem;">회원가입 신청</h3>
+      <div class="warning-box">
+        ℹ️ 가입 신청 후 관리자 승인이 완료되어야 로그인 및 회원 기능 이용이 가능합니다.
+      </div>
+      <input type="text" id="signupName" placeholder="이름" autocomplete="name">
+      <input type="tel" id="signupPhone" placeholder="전화번호 (예: 010-1234-5678)" autocomplete="tel">
+      <input type="email" id="signupEmail" placeholder="이메일 아이디" autocomplete="username">
+      <input type="password" id="signupPassword" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+      <input type="password" id="signupPassword2" placeholder="비밀번호 확인" autocomplete="new-password">
+
+      <button class="btn-submit" id="signupBtn">회원가입 신청하기</button>
+    </div>
+  </div>
+
+  <!-- 구글 최초 로그인 시 추가정보(전화번호) 입력 모달 -->
+  <div class="modal" id="extraInfoModal">
+    <div class="modal-content">
+      <h3 style="margin-bottom:0.5rem;">추가 정보 입력</h3>
+      <div class="warning-box">
+        ℹ️ Google 계정으로 처음 가입하시는군요! 승인 신청을 위해 이름과 전화번호를 입력해주세요.
+      </div>
+      <input type="text" id="extraInfoName" placeholder="이름" autocomplete="name">
+      <input type="tel" id="extraInfoPhone" placeholder="전화번호 (예: 010-1234-5678)" autocomplete="tel">
+
+      <button class="btn-submit" id="extraInfoSubmitBtn">가입 신청 완료</button>
     </div>
   </div>
 
@@ -303,10 +350,10 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
       getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, 
-      onAuthStateChanged, signOut 
+      createUserWithEmailAndPassword, onAuthStateChanged, signOut 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
-      getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, doc, getDoc, setDoc 
+      getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp, deleteDoc, doc, getDoc, setDoc 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -324,6 +371,13 @@
     const db = getFirestore(app);
     const googleProvider = new GoogleAuthProvider();
     let currentUser = null;
+
+    // 💡 저장(Stored) XSS 방지를 위한 이스케이프 함수. 사용자 입력을 화면에 표시하기 전 반드시 이 함수를 거칩니다.
+    function escapeHTML(str) {
+      return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
 
     function getAnonId() {
       let id = localStorage.getItem('sanrimsari_anon_id');
@@ -414,8 +468,15 @@
       document.getElementById(inputId).onchange = (e) => {
         const file = e.target.files[0];
         const preview = document.getElementById(previewId);
-        if (file) { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; } 
-        else { preview.style.display = 'none'; }
+        if (preview.dataset.blobUrl) { URL.revokeObjectURL(preview.dataset.blobUrl); delete preview.dataset.blobUrl; }
+        if (file) {
+          const url = URL.createObjectURL(file);
+          preview.src = url;
+          preview.dataset.blobUrl = url;
+          preview.style.display = 'block';
+        } else {
+          preview.style.display = 'none';
+        }
       };
     }
     setupImagePreview('publicImageInput', 'publicPreview');
@@ -434,30 +495,94 @@
       setTimeout(() => toast.classList.remove('show'), 1500);
     };
 
-    // 로그인 상태
-    onAuthStateChanged(auth, (user) => {
-      currentUser = user;
-      const authBtn = document.getElementById('authBtn');
+    // UI를 "로그아웃 상태"로 되돌리는 헬퍼
+    function resetUIToLoggedOut() {
+      currentUser = null;
+      document.getElementById('authBtn').textContent = '로그인';
       const memberNav = document.getElementById('memberBoardNav');
+      const adminApprovalNav = document.getElementById('adminApprovalNav');
       const blogAdminForm = document.getElementById('blogAdminForm');
       const youtubeAdminForm = document.getElementById('youtubeAdminForm');
+      if (memberNav) memberNav.style.display = 'none';
+      if (adminApprovalNav) adminApprovalNav.style.display = 'none';
+      if (blogAdminForm) blogAdminForm.style.display = 'none';
+      if (youtubeAdminForm) youtubeAdminForm.style.display = 'none';
+    }
 
-      if (user) {
-        authBtn.textContent = '로그아웃';
-        if (memberNav) memberNav.style.display = 'inline-block';
-        if (user.email === ADMIN_EMAIL) {
-          if(blogAdminForm) blogAdminForm.style.display = 'flex';
-          if(youtubeAdminForm) youtubeAdminForm.style.display = 'flex';
-        }
-        loadMemberBoard();
-        document.getElementById('loginModal').classList.remove('active');
-      } else {
-        authBtn.textContent = '로그인';
-        if (memberNav) memberNav.style.display = 'none';
-        if(blogAdminForm) blogAdminForm.style.display = 'none';
-        if(youtubeAdminForm) youtubeAdminForm.style.display = 'none';
+    // 승인된 회원(또는 관리자)에 대한 UI 활성화
+    function activateLoggedInUI(user, isAdmin) {
+      currentUser = user;
+      document.getElementById('authBtn').textContent = '로그아웃';
+      const memberNav = document.getElementById('memberBoardNav');
+      const adminApprovalNav = document.getElementById('adminApprovalNav');
+      const blogAdminForm = document.getElementById('blogAdminForm');
+      const youtubeAdminForm = document.getElementById('youtubeAdminForm');
+      if (memberNav) memberNav.style.display = 'inline-block';
+      if (isAdmin) {
+        if (adminApprovalNav) adminApprovalNav.style.display = 'inline-block';
+        if (blogAdminForm) blogAdminForm.style.display = 'flex';
+        if (youtubeAdminForm) youtubeAdminForm.style.display = 'flex';
+        loadPendingUsers();
       }
-      renderSampleOrData();
+      document.getElementById('loginModal').classList.remove('active');
+      loadMemberBoard();
+    }
+
+    // 💡 로그인 상태 관리: 관리자 승인 전 회원은 로그인/이용이 되지 않도록 처리
+    let processingAuth = false;
+    onAuthStateChanged(auth, async (user) => {
+      if (processingAuth) return;
+
+      if (!user) {
+        resetUIToLoggedOut();
+        renderSampleOrData();
+        return;
+      }
+
+      // 관리자 계정은 승인 절차 없이 바로 이용 가능
+      if (user.email === ADMIN_EMAIL) {
+        activateLoggedInUI(user, true);
+        renderSampleOrData();
+        return;
+      }
+
+      processingAuth = true;
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userDocRef);
+
+        if (!userSnap.exists()) {
+          // Firestore에 가입 신청 기록이 없는 경우 (Google 계정으로 첫 로그인)
+          // → 추가 정보(이름, 전화번호) 입력을 받아 승인 신청을 생성합니다.
+          resetUIToLoggedOut();
+          document.getElementById('extraInfoName').value = user.displayName || '';
+          document.getElementById('extraInfoPhone').value = '';
+          const modal = document.getElementById('extraInfoModal');
+          modal.dataset.uid = user.uid;
+          modal.dataset.email = user.email || '';
+          modal.classList.add('active');
+        } else {
+          const data = userSnap.data();
+          if (data.status === 'approved') {
+            activateLoggedInUI(user, false);
+          } else if (data.status === 'pending') {
+            resetUIToLoggedOut();
+            alert("아직 관리자 승인이 완료되지 않았습니다. 승인 후 다시 로그인해주세요.");
+            await signOut(auth);
+          } else {
+            resetUIToLoggedOut();
+            alert("가입 신청이 거절되었거나 문제가 발생했습니다. 관리자에게 문의해주세요.");
+            await signOut(auth);
+          }
+        }
+      } catch (e) {
+        console.error("회원 상태 확인 실패:", e);
+        resetUIToLoggedOut();
+        await signOut(auth);
+      } finally {
+        processingAuth = false;
+        renderSampleOrData();
+      }
     });
 
     getRedirectResult(auth).catch((error) => console.error("Redirect 로그인 에러: ", error));
@@ -472,10 +597,118 @@
       const email = document.getElementById('loginEmail').value;
       const pass = document.getElementById('loginPassword').value;
       if (!email || !pass) return alert("이메일과 비밀번호를 입력하세요.");
-      signInWithEmailAndPassword(auth, email, pass).then(() => { 
-        alert("로그인 성공!"); document.getElementById('loginModal').classList.remove('active'); 
+      signInWithEmailAndPassword(auth, email, pass).then(() => {
+        document.getElementById('loginModal').classList.remove('active');
       }).catch((err) => alert("로그인 실패: " + err.message));
     };
+
+    // 회원가입 모달 열기/닫기
+    document.getElementById('openSignupBtn').onclick = () => {
+      document.getElementById('loginModal').classList.remove('active');
+      document.getElementById('signupModal').classList.add('active');
+    };
+    document.getElementById('closeSignupModal').onclick = () => document.getElementById('signupModal').classList.remove('active');
+
+    // 회원가입 신청 (이메일/비밀번호 + 이름/전화번호) → Firestore에 승인 대기(status: pending) 기록 생성
+    document.getElementById('signupBtn').onclick = async () => {
+      const btn = document.getElementById('signupBtn');
+      const name = document.getElementById('signupName').value.trim();
+      const phone = document.getElementById('signupPhone').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const password2 = document.getElementById('signupPassword2').value;
+
+      if (!name || !phone || !email || !password || !password2) return alert("모든 항목을 입력해주세요.");
+      if (password.length < 6) return alert("비밀번호는 6자 이상이어야 합니다.");
+      if (password !== password2) return alert("비밀번호가 서로 일치하지 않습니다.");
+
+      btn.disabled = true;
+      btn.textContent = "가입 신청 중...";
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", cred.user.uid), {
+          name, phone, email, status: 'pending', createdAt: serverTimestamp()
+        });
+        await signOut(auth);
+        alert("회원가입 신청이 완료되었습니다.\n관리자 승인 후 로그인하실 수 있습니다.");
+        document.getElementById('signupModal').classList.remove('active');
+        document.getElementById('signupName').value = '';
+        document.getElementById('signupPhone').value = '';
+        document.getElementById('signupEmail').value = '';
+        document.getElementById('signupPassword').value = '';
+        document.getElementById('signupPassword2').value = '';
+      } catch (e) {
+        alert("회원가입 실패: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "회원가입 신청하기";
+      }
+    };
+
+    // Google 계정 최초 로그인 시 추가정보(이름/전화번호) 제출 → 승인 대기 신청 생성
+    document.getElementById('extraInfoSubmitBtn').onclick = async () => {
+      const modal = document.getElementById('extraInfoModal');
+      const uid = modal.dataset.uid;
+      const email = modal.dataset.email;
+      const name = document.getElementById('extraInfoName').value.trim();
+      const phone = document.getElementById('extraInfoPhone').value.trim();
+      if (!name || !phone) return alert("이름과 전화번호를 입력해주세요.");
+
+      try {
+        await setDoc(doc(db, "users", uid), { name, phone, email, status: 'pending', createdAt: serverTimestamp() });
+        modal.classList.remove('active');
+        alert("회원가입 신청이 완료되었습니다.\n관리자 승인 후 이용하실 수 있습니다.");
+        await signOut(auth);
+      } catch (e) {
+        alert("가입 신청 실패: " + e.message);
+      }
+    };
+
+    // 관리자: 가입 승인 / 거절
+    window.approveUser = async function(uid) {
+      if (!confirm("이 회원의 가입을 승인하시겠습니까?")) return;
+      try {
+        await setDoc(doc(db, "users", uid), { status: 'approved' }, { merge: true });
+        alert("승인되었습니다.");
+        loadPendingUsers();
+      } catch (e) { alert("승인 처리 실패: " + e.message); }
+    };
+    window.rejectUser = async function(uid) {
+      if (!confirm("이 가입 신청을 거절하시겠습니까?\n(신청 정보만 삭제되며, 인증 계정 자체는 Firebase 콘솔에서 별도로 정리해야 합니다.)")) return;
+      try {
+        await deleteDoc(doc(db, "users", uid));
+        alert("거절 처리되었습니다.");
+        loadPendingUsers();
+      } catch (e) { alert("처리 실패: " + e.message); }
+    };
+
+    async function loadPendingUsers() {
+      const container = document.getElementById('pendingUsersList');
+      if (!container) return;
+      try {
+        const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        let html = '';
+        snap.forEach(d => {
+          const data = d.data();
+          if (data.status !== 'pending') return;
+          html += `
+            <div class="card">
+              <div>
+                <p><strong>${escapeHTML(data.name)}</strong></p>
+                <p>이메일: ${escapeHTML(data.email)}</p>
+                <p>전화번호: ${escapeHTML(data.phone)}</p>
+              </div>
+              <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                <button class="btn-submit" style="flex:1;" onclick="approveUser('${d.id}')">승인</button>
+                <button class="btn-delete" style="flex:1;" onclick="rejectUser('${d.id}')">거절</button>
+              </div>
+            </div>
+          `;
+        });
+        container.innerHTML = html || '<p style="color:#718096;">승인 대기 중인 회원이 없습니다.</p>';
+      } catch (e) { console.error("가입 신청 목록 로드 실패:", e); }
+    }
 
     // 관리자 블로그 저장
     document.getElementById('saveBlogBtn').onclick = async () => {
@@ -618,14 +851,14 @@
           const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
           const isMyPost = (currentUser && currentUser.uid === data.uid) || (!currentUser && myAnonId === data.uid);
           const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deletePublicMemo('${d.id}')">삭제</button>` : '';
-          const imageHTML = data.imageUrl ? `<img src="${data.imageUrl}" class="post-img" alt="첨부 사진">` : '';
+          const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
           boardHTML += `
             <div class="card">
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <p><strong>${data.author || '익명'}</strong> <small>(${time})</small></p>
+                <p><strong>${escapeHTML(data.author || '익명')}</strong> <small>(${escapeHTML(time)})</small></p>
                 ${deleteBtnHTML}
               </div>
-              ${data.content ? `<p style="margin-top:0.5rem;">${data.content}</p>` : ''}
+              ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
               ${imageHTML}
             </div>
           `;
@@ -647,14 +880,14 @@
           const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
           const isMyPost = currentUser && (currentUser.uid === data.uid || currentUser.email === data.email);
           const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deleteMemberMemo('${d.id}')">삭제</button>` : '';
-          const imageHTML = data.imageUrl ? `<img src="${data.imageUrl}" class="post-img" alt="첨부 사진">` : '';
+          const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
           boardHTML += `
             <div class="card">
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <p><strong>${data.author || '회원'} (회원)</strong> <small>(${time})</small></p>
+                <p><strong>${escapeHTML(data.author || '회원')} (회원)</strong> <small>(${escapeHTML(time)})</small></p>
                 ${deleteBtnHTML}
               </div>
-              ${data.content ? `<p style="margin-top:0.5rem;">${data.content}</p>` : ''}
+              ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
               ${imageHTML}
             </div>
           `;
@@ -710,10 +943,11 @@
       const container = document.getElementById('summaryGrid');
       if (!container) return;
       try {
-        const blogQ = query(collection(db, "blogs"), orderBy("createdAt", "desc"));
+        // 💡 최신 2개만 필요하므로 전체를 읽지 않고 limit(2)로 조회량을 줄입니다.
+        const blogQ = query(collection(db, "blogs"), orderBy("createdAt", "desc"), limit(2));
         const blogSnap = await getDocs(blogQ);
         
-        const ytQ = query(collection(db, "youtubes"), orderBy("createdAt", "desc"));
+        const ytQ = query(collection(db, "youtubes"), orderBy("createdAt", "desc"), limit(2));
         const ytSnap = await getDocs(ytQ);
 
         const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
@@ -830,16 +1064,17 @@
     }
 
     function createCardHTML(title, body, imgSrc, ytEmbed, likes = 0, deleteBtnHTML = '') {
+      const safeTitle = escapeHTML(title);
       return `
         <div class="card ${ytEmbed ? 'youtube-card' : ''}">
           <div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-              <h3 style="margin:0;">${title}</h3>
+              <h3 style="margin:0;">${safeTitle}</h3>
               ${deleteBtnHTML}
             </div>
-            ${imgSrc ? `<img src="${imgSrc}" class="blog-card-image" alt="이미지">` : ''}
-            ${ytEmbed ? `<iframe src="${ytEmbed}" allowfullscreen></iframe>` : ''}
-            ${body ? `<p style="font-size:1rem; color:#4a5568; margin-top:0.5rem;">${body}</p>` : ''}
+            ${imgSrc ? `<img src="${escapeHTML(imgSrc)}" class="blog-card-image" alt="이미지">` : ''}
+            ${ytEmbed ? `<iframe src="${escapeHTML(ytEmbed)}" title="${safeTitle}" allowfullscreen></iframe>` : ''}
+            ${body ? `<p style="font-size:1rem; color:#4a5568; margin-top:0.5rem;">${escapeHTML(body)}</p>` : ''}
           </div>
           <div class="like-container">
             <span class="toast-msg">눌렀어요</span>
@@ -851,9 +1086,8 @@
       `;
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      renderSampleOrData();
-    });
+    // 💡 onAuthStateChanged가 페이지 로드시 최초 1회 자동 실행되며 renderSampleOrData()를 호출하므로
+    // 여기서 별도로 다시 호출하지 않습니다 (중복 렌더링/깜빡임 방지).
   </script>
 </body>
 </html>

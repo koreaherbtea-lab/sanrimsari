@@ -61,6 +61,14 @@
     .card img { width: 100%; border-radius: 8px; height: 200px; object-fit: cover; margin-bottom: 1rem; }
     .youtube-card iframe { width: 100%; height: 240px; border-radius: 8px; border: none; margin-bottom: 1rem; }
 
+    /* 게시글 첨부 이미지 및 미리보기 */
+    .post-img {
+      width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-top: 0.8rem;
+    }
+    .img-preview {
+      display: none; max-height: 180px; width: fit-content; border-radius: 8px; border: 1px solid #cbd5e0; margin-top: 0.5rem; object-fit: cover;
+    }
+
     /* 좋아요 버튼 & 토스트 애니메이션 */
     .like-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; position: relative; }
     .like-btn {
@@ -78,7 +86,7 @@
     }
     .toast-msg.show { opacity: 1; visibility: visible; }
 
-    /* 경고창 & 폼 */
+    /* 경고창 & 폼 & 버튼 */
     .warning-box {
       background-color: var(--danger-bg); border-left: 4px solid var(--danger-border);
       color: var(--danger-text); padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 4px; font-size: 0.9rem;
@@ -91,8 +99,19 @@
     .write-box input, .write-box textarea, .admin-form input, .admin-form textarea {
       width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem;
     }
+    .file-input-label {
+      font-size: 0.85rem; color: #4a5568; font-weight: bold; margin-top: 0.2rem;
+    }
     .btn-submit { background-color: var(--primary-color); color: white; border: none; padding: 0.75rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
     .btn-submit:hover { background-color: var(--primary-hover); }
+    .btn-submit:disabled { background-color: #a0aec0; cursor: not-allowed; }
+
+    /* 삭제 버튼 스타일 */
+    .btn-delete {
+      background-color: #e53e3e; color: white; border: none; padding: 0.25rem 0.6rem;
+      border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;
+    }
+    .btn-delete:hover { background-color: #c53030; }
 
     /* 모달 창 */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
@@ -169,9 +188,21 @@
       <div class="warning-box">
         ⚠️ 광고, 혐오, 비방 등 부적절한 글은 사전 통보 없이 삭제될 수 있습니다.
       </div>
-      <div class="write-box">
+
+      <!-- 글쓰기 토글 버튼 -->
+      <div style="margin-bottom: 1rem; text-align: right;">
+        <button class="btn-submit" id="togglePublicWriteBtn">✍️ 글쓰기</button>
+      </div>
+
+      <!-- 일반 글 작성 칸 -->
+      <div class="write-box" id="publicWriteBox" style="display:none;">
         <input type="text" id="publicAuthor" placeholder="작성자 이름" autocomplete="off">
         <textarea id="publicMemo" placeholder="따뜻한 한 마디를 남겨주세요"></textarea>
+        
+        <label class="file-input-label">📷 이미지 첨부 (선택):</label>
+        <input type="file" id="publicImageInput" accept="image/*" style="padding:0.4rem; background:#f8fafc; border:1px solid #cbd5e0; border-radius:6px;">
+        <img id="publicPreview" class="img-preview" alt="선택한 사진 미리보기">
+        
         <button class="btn-submit" id="postPublicBtn">글 남기기</button>
       </div>
       <div id="publicBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
@@ -183,8 +214,20 @@
       <div class="warning-box">
         ⚠️ 광고, 혐오, 비방 등 부적절한 글은 사전 통보 없이 삭제될 수 있습니다.
       </div>
-      <div class="write-box">
+
+      <!-- 회원 글쓰기 토글 버튼 -->
+      <div style="margin-bottom: 1rem; text-align: right;">
+        <button class="btn-submit" id="toggleMemberWriteBtn">✍️ 글쓰기</button>
+      </div>
+
+      <!-- 회원 글 작성 칸 -->
+      <div class="write-box" id="memberWriteBox" style="display:none;">
         <textarea id="memberMemo" placeholder="회원들만의 도란도란 이야기를 남겨보세요."></textarea>
+        
+        <label class="file-input-label">📷 이미지 첨부 (선택):</label>
+        <input type="file" id="memberImageInput" accept="image/*" style="padding:0.4rem; background:#f8fafc; border:1px solid #cbd5e0; border-radius:6px;">
+        <img id="memberPreview" class="img-preview" alt="선택한 사진 미리보기">
+        
         <button class="btn-submit" id="postMemberBtn">회원 글 남기기</button>
       </div>
       <div id="memberBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
@@ -221,12 +264,12 @@
       onAuthStateChanged, signOut 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
-      getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp 
+      getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, doc 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 1. 파이어베이스 설정 (⚠️ apiKey 부분에 파이어베이스 콘솔의 진짜 키를 넣어주세요!)
+    // 1. 파이어베이스 설정
     const firebaseConfig = {
-      apiKey: "여기에_파이어베이스_API_키를_붙여넣으세요",
+      apiKey: "AIzaSyBooX0LMC0KM8Tzl_i1ptcQuvl_uGTySto",
       authDomain: "sanrimsari.firebaseapp.com",
       projectId: "sanrimsari",
       storageBucket: "sanrimsari.firebasestorage.app",
@@ -244,7 +287,59 @@
 
     let currentUser = null;
 
-    // 모바일 토글
+    // 비회원 작성자 식별 토큰
+    function getAnonId() {
+      let id = localStorage.getItem('sanrimsari_anon_id');
+      if (!id) {
+        id = 'anon_' + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem('sanrimsari_anon_id', id);
+      }
+      return id;
+    }
+
+    // 💡 이미지를 800px 크기로 자동으로 최적화/압축하여 안전하게 텍스트로 전환하는 처리 함수
+    function processImageFile(file) {
+      return new Promise((resolve) => {
+        if (!file) return resolve(null);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 800; // 최대 가로/세로 길이 800px로 조정
+
+            if (width > height) {
+              if (width > maxDim) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              }
+            } else {
+              if (height > maxDim) {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // JPEG 70% 화질로 용량 대폭 압축
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            resolve(dataUrl);
+          };
+          img.onerror = () => resolve(null);
+          img.src = e.target.result;
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 모바일 메뉴 토글
     document.getElementById('menuToggle').onclick = () => document.getElementById('navMenu').classList.toggle('open');
 
     // 메뉴 전환
@@ -255,7 +350,41 @@
       document.getElementById('navMenu').classList.remove('open');
     };
 
-    // 좋아요 버튼 함수
+    // '글쓰기' 토글 버튼
+    document.getElementById('togglePublicWriteBtn').onclick = () => {
+      const box = document.getElementById('publicWriteBox');
+      box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+    };
+
+    document.getElementById('toggleMemberWriteBtn').onclick = () => {
+      const box = document.getElementById('memberWriteBox');
+      box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+    };
+
+    // 이미지 실시간 미리보기
+    document.getElementById('publicImageInput').onchange = (e) => {
+      const file = e.target.files[0];
+      const preview = document.getElementById('publicPreview');
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+    };
+
+    document.getElementById('memberImageInput').onchange = (e) => {
+      const file = e.target.files[0];
+      const preview = document.getElementById('memberPreview');
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+    };
+
+    // 좋아요 버튼
     window.handleLike = async function(btn) {
       if (btn.disabled) return;
       btn.disabled = true;
@@ -293,15 +422,18 @@
         if(blogAdminForm) blogAdminForm.style.display = 'none';
         if(youtubeAdminForm) youtubeAdminForm.style.display = 'none';
       }
+      loadPublicBoard();
+      loadBlogList();
+      loadYoutubeList();
     });
 
-    // 화면 이동(Redirect) 로그인 에러 처리
+    // Redirect 로그인 결과 수신
     getRedirectResult(auth).catch((error) => {
       console.error("Redirect 로그인 에러: ", error);
       alert("Google 로그인 중 문제가 발생했습니다: " + error.message);
     });
 
-    // 로그인 모달 열기/닫기/로그아웃
+    // 로그인 모달 닫기
     document.getElementById('authBtn').onclick = () => {
       if (currentUser) {
         signOut(auth).then(() => alert("로그아웃 되었습니다."));
@@ -313,56 +445,138 @@
       document.getElementById('loginModal').classList.remove('active');
     };
 
-    // Google 로그인
-    document.getElementById('googleLoginBtn').onclick = () => {
-      signInWithRedirect(auth, googleProvider);
-    };
-
-    // 이메일 로그인
+    // 구글 / 이메일 로그인
+    document.getElementById('googleLoginBtn').onclick = () => signInWithRedirect(auth, googleProvider);
     document.getElementById('emailLoginBtn').onclick = () => {
       const email = document.getElementById('loginEmail').value;
       const pass = document.getElementById('loginPassword').value;
-
       if (!email || !pass) return alert("이메일과 비밀번호를 입력하세요.");
-
       signInWithEmailAndPassword(auth, email, pass)
         .then(() => {
           alert("로그인 성공!");
           document.getElementById('loginModal').classList.remove('active');
         })
-        .catch((err) => {
-          alert("로그인 실패: " + err.message);
-        });
+        .catch((err) => alert("로그인 실패: " + err.message));
     };
 
-    // 소통창 등록
+    // 관리자 기능
+    document.getElementById('saveBlogBtn').onclick = async () => {
+      const title = document.getElementById('blogTitleInput').value;
+      const content = document.getElementById('blogContentInput').value;
+      if (!title || !content) return alert("제목과 내용을 입력해주세요.");
+
+      try {
+        await addDoc(collection(db, "blogs"), { title, content, createdAt: serverTimestamp() });
+        alert("블로그 글이 등록되었습니다!");
+        document.getElementById('blogTitleInput').value = '';
+        document.getElementById('blogContentInput').value = '';
+        loadBlogList();
+      } catch(e) { alert("글 등록 실패: " + e.message); }
+    };
+
+    document.getElementById('saveYtBtn').onclick = async () => {
+      const title = document.getElementById('ytTitleInput').value;
+      const url = document.getElementById('ytUrlInput').value;
+      if (!title || !url) return alert("제목과 Embed 링크를 입력해주세요.");
+
+      try {
+        await addDoc(collection(db, "youtubes"), { title, url, createdAt: serverTimestamp() });
+        alert("유튜브 영상이 등록되었습니다!");
+        document.getElementById('ytTitleInput').value = '';
+        document.getElementById('ytUrlInput').value = '';
+        loadYoutubeList();
+      } catch(e) { alert("영상 등록 실패: " + e.message); }
+    };
+
+    // 일반 소통창 글 저장 (스토리지 없이 100% 저장되는 방식)
     document.getElementById('postPublicBtn').onclick = async () => {
+      const btn = document.getElementById('postPublicBtn');
       const author = document.getElementById('publicAuthor').value || "익명";
       const content = document.getElementById('publicMemo').value;
-      if (!content) return alert("내용을 입력하세요.");
+      const imageFile = document.getElementById('publicImageInput').files[0];
+
+      if (!content && !imageFile) return alert("글 내용이나 이미지 중 하나는 입력해야 합니다.");
+
+      btn.disabled = true;
+      btn.textContent = "저장 중...";
 
       try {
-        await addDoc(collection(db, "publicMemos"), { author, content, createdAt: serverTimestamp() });
+        const imageUrl = await processImageFile(imageFile);
+        const uid = currentUser ? currentUser.uid : getAnonId();
+
+        await addDoc(collection(db, "publicMemos"), {
+          author, content, uid, imageUrl, createdAt: serverTimestamp()
+        });
+
         document.getElementById('publicMemo').value = '';
+        document.getElementById('publicImageInput').value = '';
+        document.getElementById('publicPreview').style.display = 'none';
+        document.getElementById('publicWriteBox').style.display = 'none';
         loadPublicBoard();
-      } catch(e) { alert("글 저장 실패: " + e.message); }
+      } catch(e) {
+        alert("글 저장 실패: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "글 남기기";
+      }
     };
 
+    // 회원 소통창 글 저장 (스토리지 없이 100% 저장되는 방식)
     document.getElementById('postMemberBtn').onclick = async () => {
+      const btn = document.getElementById('postMemberBtn');
       const content = document.getElementById('memberMemo').value;
-      if (!content) return alert("내용을 입력하세요.");
+      const imageFile = document.getElementById('memberImageInput').files[0];
+
+      if (!content && !imageFile) return alert("글 내용이나 이미지 중 하나는 입력해야 합니다.");
+
+      btn.disabled = true;
+      btn.textContent = "저장 중...";
 
       try {
+        const imageUrl = await processImageFile(imageFile);
+
         await addDoc(collection(db, "memberMemos"), {
           author: currentUser.displayName || currentUser.email.split('@')[0],
-          content, createdAt: serverTimestamp()
+          content,
+          uid: currentUser.uid,
+          email: currentUser.email,
+          imageUrl,
+          createdAt: serverTimestamp()
         });
+
         document.getElementById('memberMemo').value = '';
+        document.getElementById('memberImageInput').value = '';
+        document.getElementById('memberPreview').style.display = 'none';
+        document.getElementById('memberWriteBox').style.display = 'none';
         loadMemberBoard();
-      } catch(e) { alert("글 저장 실패: " + e.message); }
+      } catch(e) {
+        alert("글 저장 실패: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "회원 글 남기기";
+      }
     };
 
-    // 소통창 GET
+    // 글 삭제
+    window.deletePublicMemo = async function(id) {
+      if (!confirm("정말 이 글을 삭제하시겠습니까?")) return;
+      try {
+        await deleteDoc(doc(db, "publicMemos", id));
+        alert("글이 삭제되었습니다.");
+        loadPublicBoard();
+      } catch(e) { alert("글 삭제 실패: " + e.message); }
+    };
+
+    window.deleteMemberMemo = async function(id) {
+      if (!confirm("정말 이 글을 삭제하시겠습니까?")) return;
+      try {
+        await deleteDoc(doc(db, "memberMemos", id));
+        alert("글이 삭제되었습니다.");
+        loadMemberBoard();
+      } catch(e) { alert("글 삭제 실패: " + e.message); }
+    };
+
+    // 소통창 불려오기
     async function loadPublicBoard() {
       const container = document.getElementById('publicBoardList');
       if (!container) return;
@@ -370,14 +584,33 @@
       try {
         const q = query(collection(db, "publicMemos"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
+        const myAnonId = getAnonId();
+        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+
         snap.forEach(d => {
           const data = d.data();
           const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
-          container.innerHTML += `<div class="card"><p><strong>${data.author}</strong> <small>(${time})</small></p><p>${data.content}</p></div>`;
+          
+          const isMyPost = (currentUser && currentUser.uid === data.uid) || (!currentUser && myAnonId === data.uid);
+          const canDelete = isMyPost || isAdmin;
+          const deleteBtnHTML = canDelete ? `<button class="btn-delete" onclick="deletePublicMemo('${d.id}')">삭제</button>` : '';
+          const imageHTML = data.imageUrl ? `<img src="${data.imageUrl}" class="post-img" alt="첨부 사진">` : '';
+
+          container.innerHTML += `
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <p><strong>${data.author || '익명'}</strong> <small>(${time})</small></p>
+                ${deleteBtnHTML}
+              </div>
+              ${data.content ? `<p style="margin-top:0.5rem;">${data.content}</p>` : ''}
+              ${imageHTML}
+            </div>
+          `;
         });
       } catch(e) { console.log(e); }
     }
 
+    // 회원 소통창 불려오기
     async function loadMemberBoard() {
       const container = document.getElementById('memberBoardList');
       if (!container) return;
@@ -385,15 +618,66 @@
       try {
         const q = query(collection(db, "memberMemos"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
+        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+
         snap.forEach(d => {
           const data = d.data();
           const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
-          container.innerHTML += `<div class="card"><p><strong>${data.author} (회원)</strong> <small>(${time})</small></p><p>${data.content}</p></div>`;
+          
+          const isMyPost = currentUser && (currentUser.uid === data.uid || currentUser.email === data.email);
+          const canDelete = isMyPost || isAdmin;
+          const deleteBtnHTML = canDelete ? `<button class="btn-delete" onclick="deleteMemberMemo('${d.id}')">삭제</button>` : '';
+          const imageHTML = data.imageUrl ? `<img src="${data.imageUrl}" class="post-img" alt="첨부 사진">` : '';
+
+          container.innerHTML += `
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <p><strong>${data.author || '회원'} (회원)</strong> <small>(${time})</small></p>
+                ${deleteBtnHTML}
+              </div>
+              ${data.content ? `<p style="margin-top:0.5rem;">${data.content}</p>` : ''}
+              ${imageHTML}
+            </div>
+          `;
         });
       } catch(e) { console.log(e); }
     }
 
-    // 초기 카드 UI 로딩
+    // 블로그 불려오기
+    async function loadBlogList() {
+      const container = document.getElementById('blogList');
+      if (!container) return;
+      try {
+        const q = query(collection(db, "blogs"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          container.innerHTML = '';
+          snap.forEach(d => {
+            const data = d.data();
+            container.innerHTML += createCardHTML(data.title, data.content, "https://picsum.photos/400/250?random=" + Math.random(), null, 0);
+          });
+        }
+      } catch(e) { console.log(e); }
+    }
+
+    // 유튜브 불려오기
+    async function loadYoutubeList() {
+      const container = document.getElementById('youtubeList');
+      if (!container) return;
+      try {
+        const q = query(collection(db, "youtubes"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          container.innerHTML = '';
+          snap.forEach(d => {
+            const data = d.data();
+            container.innerHTML += createCardHTML(data.title, "", null, data.url, 0);
+          });
+        }
+      } catch(e) { console.log(e); }
+    }
+
+    // 카드 생성 템플릿
     function createCardHTML(title, body, imgSrc, ytEmbed, likes = 0) {
       return `
         <div class="card ${ytEmbed ? 'youtube-card' : ''}">
@@ -413,9 +697,10 @@
       `;
     }
 
+    // 초기 실행
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('todayVisitors').textContent = 45;
-      document.getElementById('totalVisitors').textContent = 1620;
+      document.getElementById('todayVisitors').textContent = 48;
+      document.getElementById('totalVisitors').textContent = 1652;
 
       const blog1 = createCardHTML("🌲 숲속에서의 첫 아침", "새소리와 함께 시작하는 산림살이 이야기...", "https://picsum.photos/400/250?random=1", null, 12);
       const blog2 = createCardHTML("🌲 자연 속 힐링 스팟", "깊은 산속 오솔길을 따라 걷다 발견한 명소...", "https://picsum.photos/400/250?random=2", null, 8);
@@ -427,6 +712,8 @@
       document.getElementById('youtubeList').innerHTML = yt1 + yt2;
 
       loadPublicBoard();
+      loadBlogList();
+      loadYoutubeList();
     });
   </script>
 </body>

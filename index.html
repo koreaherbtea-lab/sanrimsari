@@ -170,7 +170,7 @@
         ⚠️ 광고, 혐오, 비방 등 부적절한 글은 사전 통보 없이 삭제될 수 있습니다.
       </div>
       <div class="write-box">
-        <input type="text" id="publicAuthor" placeholder="작성자 이름">
+        <input type="text" id="publicAuthor" placeholder="작성자 이름" autocomplete="off">
         <textarea id="publicMemo" placeholder="따뜻한 한 마디를 남겨주세요"></textarea>
         <button class="btn-submit" id="postPublicBtn">글 남기기</button>
       </div>
@@ -197,9 +197,10 @@
     <div class="modal-content">
       <span class="close-btn" id="closeLoginModal">&times;</span>
       <h3 style="margin-bottom:0.5rem;">로그인</h3>
-      <input type="email" id="loginEmail" placeholder="이메일 아이디">
-      <input type="password" id="loginPassword" placeholder="비밀번호">
-      <button class="btn-submit" id="emailLoginBtn">로그인</button>
+      <input type="email" id="loginEmail" placeholder="이메일 아이디" autocomplete="off">
+      <input type="password" id="loginPassword" placeholder="비밀번호" autocomplete="new-password">
+      
+      <button class="btn-submit" id="emailLoginBtn">이메일로 로그인</button>
       <button class="google-btn" id="googleLoginBtn">Google 계정으로 로그인</button>
     </div>
   </div>
@@ -216,16 +217,16 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
-      getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, 
+      getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, 
       onAuthStateChanged, signOut 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
-      getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc, increment 
+      getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 1. 파이어베이스 설정
+    // 1. 파이어베이스 설정 (⚠️ apiKey 부분에 파이어베이스 콘솔의 진짜 키를 넣어주세요!)
     const firebaseConfig = {
-      apiKey: "AIzaSyBooX0LMC0KM8Tzl_i1ptcQuvl_uGTySto",
+      apiKey: "여기에_파이어베이스_API_키를_붙여넣으세요",
       authDomain: "sanrimsari.firebaseapp.com",
       projectId: "sanrimsari",
       storageBucket: "sanrimsari.firebasestorage.app",
@@ -255,7 +256,7 @@
     };
 
     // 좋아요 버튼 함수
-    window.handleLike = async function(btn, docId) {
+    window.handleLike = async function(btn) {
       if (btn.disabled) return;
       btn.disabled = true;
       btn.classList.add('liked');
@@ -267,7 +268,7 @@
       setTimeout(() => toast.classList.remove('show'), 1500);
     };
 
-    // 로그인 감지 및 관리자 폼 노출
+    // 로그인 상태 감지
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
       const authBtn = document.getElementById('authBtn');
@@ -285,6 +286,7 @@
         }
 
         loadMemberBoard();
+        document.getElementById('loginModal').classList.remove('active');
       } else {
         authBtn.textContent = '로그인';
         if (memberNav) memberNav.style.display = 'none';
@@ -293,7 +295,13 @@
       }
     });
 
-    // 로그인 모달
+    // 화면 이동(Redirect) 로그인 에러 처리
+    getRedirectResult(auth).catch((error) => {
+      console.error("Redirect 로그인 에러: ", error);
+      alert("Google 로그인 중 문제가 발생했습니다: " + error.message);
+    });
+
+    // 로그인 모달 열기/닫기/로그아웃
     document.getElementById('authBtn').onclick = () => {
       if (currentUser) {
         signOut(auth).then(() => alert("로그아웃 되었습니다."));
@@ -301,9 +309,13 @@
         document.getElementById('loginModal').classList.add('active');
       }
     };
-
     document.getElementById('closeLoginModal').onclick = () => {
       document.getElementById('loginModal').classList.remove('active');
+    };
+
+    // Google 로그인
+    document.getElementById('googleLoginBtn').onclick = () => {
+      signInWithRedirect(auth, googleProvider);
     };
 
     // 이메일 로그인
@@ -321,16 +333,6 @@
         .catch((err) => {
           alert("로그인 실패: " + err.message);
         });
-    };
-
-    // Google 로그인
-    document.getElementById('googleLoginBtn').onclick = () => {
-      signInWithPopup(auth, googleProvider)
-        .then(() => {
-          alert("Google 로그인 성공!");
-          document.getElementById('loginModal').classList.remove('active');
-        })
-        .catch((err) => alert("Google 로그인 실패: " + err.message));
     };
 
     // 소통창 등록

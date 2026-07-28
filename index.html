@@ -82,7 +82,7 @@
       margin-top: 0.8rem !important;
     }
 
-    /* 글 작성 시 미리보기 썸네일 */
+    /* 미리보기 썸네일 */
     .img-preview {
       display: none;
       max-width: 480px !important;
@@ -310,7 +310,6 @@
     const googleProvider = new GoogleAuthProvider();
     let currentUser = null;
 
-    // 비회원 작성자 식별 토큰
     function getAnonId() {
       let id = localStorage.getItem('sanrimsari_anon_id');
       if (!id) {
@@ -320,7 +319,6 @@
       return id;
     }
 
-    // 이미지 리사이징 (최대 480 * 240px 이하)
     function processImageFile(file) {
       return new Promise((resolve) => {
         if (!file) return resolve(null);
@@ -331,7 +329,6 @@
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
-            
             const maxWidth = 480;
             const maxHeight = 240;
 
@@ -357,7 +354,6 @@
       });
     }
 
-    // 모바일 메뉴 및 섹션 전환
     document.getElementById('menuToggle').onclick = () => document.getElementById('navMenu').classList.toggle('open');
     window.showSection = function(id) {
       document.querySelectorAll('.page-section').forEach(s => s.style.display = 'none');
@@ -366,7 +362,6 @@
       document.getElementById('navMenu').classList.remove('open');
     };
 
-    // '글쓰기' 폼 열기/닫기
     document.getElementById('togglePublicWriteBtn').onclick = () => {
       const box = document.getElementById('publicWriteBox');
       box.style.display = box.style.display === 'none' ? 'flex' : 'none';
@@ -376,29 +371,19 @@
       box.style.display = box.style.display === 'none' ? 'flex' : 'none';
     };
 
-    // 이미지 미리보기
     document.getElementById('publicImageInput').onchange = (e) => {
       const file = e.target.files[0];
       const preview = document.getElementById('publicPreview');
-      if (file) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-      }
+      if (file) { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; } 
+      else { preview.style.display = 'none'; }
     };
     document.getElementById('memberImageInput').onchange = (e) => {
       const file = e.target.files[0];
       const preview = document.getElementById('memberPreview');
-      if (file) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-      }
+      if (file) { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; } 
+      else { preview.style.display = 'none'; }
     };
 
-    // 좋아요 버튼 애니메이션
     window.handleLike = async function(btn) {
       if (btn.disabled) return;
       btn.disabled = true;
@@ -434,18 +419,14 @@
         if(blogAdminForm) blogAdminForm.style.display = 'none';
         if(youtubeAdminForm) youtubeAdminForm.style.display = 'none';
       }
-      loadPublicBoard();
-      loadBlogList();
-      loadYoutubeList();
+      renderSampleOrData();
     });
 
-    // 구글 로그인 결과 처리
     getRedirectResult(auth).catch((error) => {
       console.error("Redirect 로그인 에러: ", error);
       alert("Google 로그인 중 문제가 발생했습니다: " + error.message);
     });
 
-    // 로그인 모달
     document.getElementById('authBtn').onclick = () => {
       if (currentUser) signOut(auth).then(() => alert("로그아웃 되었습니다."));
       else document.getElementById('loginModal').classList.add('active');
@@ -463,7 +444,7 @@
         .catch((err) => alert("로그인 실패: " + err.message));
     };
 
-    // 관리자 기능
+    // 관리자 글 등록
     document.getElementById('saveBlogBtn').onclick = async () => {
       const title = document.getElementById('blogTitleInput').value;
       const content = document.getElementById('blogContentInput').value;
@@ -517,7 +498,6 @@
       finally { btn.disabled = false; btn.textContent = "글 남기기"; }
     };
 
-    // 회원 소통창 글 작성
     document.getElementById('postMemberBtn').onclick = async () => {
       const btn = document.getElementById('postMemberBtn');
       const content = document.getElementById('memberMemo').value;
@@ -543,46 +523,38 @@
       finally { btn.disabled = false; btn.textContent = "회원 글 남기기"; }
     };
 
-    // 💡 게시글 삭제 함수 모음
+    // 게시글 삭제 함수들
     window.deletePublicMemo = async function(id) {
       if (!confirm("정말로 이 게시글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
-      try { 
-        await deleteDoc(doc(db, "publicMemos", id)); 
-        alert("글이 삭제되었습니다."); 
-        loadPublicBoard(); 
-      } catch(e) { alert("글 삭제 실패: " + e.message); }
+      try { await deleteDoc(doc(db, "publicMemos", id)); alert("글이 삭제되었습니다."); loadPublicBoard(); } 
+      catch(e) { alert("글 삭제 실패: " + e.message); }
     };
 
     window.deleteMemberMemo = async function(id) {
       if (!confirm("정말로 이 게시글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
-      try { 
-        await deleteDoc(doc(db, "memberMemos", id)); 
-        alert("글이 삭제되었습니다."); 
-        loadMemberBoard(); 
-      } catch(e) { alert("글 삭제 실패: " + e.message); }
+      try { await deleteDoc(doc(db, "memberMemos", id)); alert("글이 삭제되었습니다."); loadMemberBoard(); } 
+      catch(e) { alert("글 삭제 실패: " + e.message); }
     };
 
-    // 💡 관리자 전용: 블로그 글 삭제 함수
     window.deleteBlog = async function(id) {
       if (!confirm("정말로 이 블로그 글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
-      try {
-        await deleteDoc(doc(db, "blogs", id));
-        alert("블로그 글이 삭제되었습니다.");
-        loadBlogList();
-      } catch(e) { alert("블로그 삭제 실패: " + e.message); }
+      try { await deleteDoc(doc(db, "blogs", id)); alert("블로그 글이 삭제되었습니다."); loadBlogList(); } 
+      catch(e) { alert("블로그 삭제 실패: " + e.message); }
     };
 
-    // 💡 관리자 전용: 유튜브 영상 삭제 함수
     window.deleteYoutube = async function(id) {
       if (!confirm("정말로 이 유튜브 영상을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
-      try {
-        await deleteDoc(doc(db, "youtubes", id));
-        alert("유튜브 영상이 삭제되었습니다.");
-        loadYoutubeList();
-      } catch(e) { alert("유튜브 삭제 실패: " + e.message); }
+      try { await deleteDoc(doc(db, "youtubes", id)); alert("유튜브 영상이 삭제되었습니다."); loadYoutubeList(); } 
+      catch(e) { alert("유튜브 삭제 실패: " + e.message); }
     };
 
-    // 소통창 목록 불러오기
+    // 샘플 글 화면 삭제 함수 (샘플 글용)
+    window.deleteSampleCard = function(btn) {
+      if (!confirm("정말로 이 예시글을 화면에서 지우시겠습니까?")) return;
+      const card = btn.closest('.card');
+      if (card) card.remove();
+    };
+
     async function loadPublicBoard() {
       const container = document.getElementById('publicBoardList');
       if (!container) return;
@@ -616,7 +588,6 @@
       } catch(e) { console.log(e); }
     }
 
-    // 회원소통창 목록 불러오기
     async function loadMemberBoard() {
       const container = document.getElementById('memberBoardList');
       if (!container) return;
@@ -649,7 +620,6 @@
       } catch(e) { console.log(e); }
     }
 
-    // 💡 블로그 목록 불러오기 (삭제 버튼 권한 포함)
     async function loadBlogList() {
       const container = document.getElementById('blogList');
       if (!container) return;
@@ -666,11 +636,13 @@
             blogHTML += createCardHTML(data.title, data.content, "https://picsum.photos/400/250?random=" + Math.random(), null, 0, deleteBtnHTML);
           });
           container.innerHTML = blogHTML;
+        } else {
+          // DB가 비어있을 땐 샘플 출력
+          renderSampleBlogs();
         }
       } catch(e) { console.log(e); }
     }
 
-    // 💡 유튜브 목록 불러오기 (삭제 버튼 권한 포함)
     async function loadYoutubeList() {
       const container = document.getElementById('youtubeList');
       if (!container) return;
@@ -687,11 +659,39 @@
             ytHTML += createCardHTML(data.title, "", null, data.url, 0, deleteBtnHTML);
           });
           container.innerHTML = ytHTML;
+        } else {
+          // DB가 비어있을 땐 샘플 출력
+          renderSampleYoutubes();
         }
       } catch(e) { console.log(e); }
     }
 
-    // 💡 카드 생성 HTML 함수 (제목과 삭제 버튼 정렬 지원)
+    function renderSampleBlogs() {
+      const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+      const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteSampleCard(this)">삭제</button>` : '';
+      
+      const blog1 = createCardHTML("🌲 숲속에서의 첫 아침", "새소리와 함께 시작하는 산림살이 이야기...", "https://picsum.photos/400/250?random=1", null, 12, deleteBtnHTML);
+      const blog2 = createCardHTML("🌲 자연 속 힐링 스팟", "깊은 산속 오솔길을 따라 걷다 발견한 명소...", "https://picsum.photos/400/250?random=2", null, 8, deleteBtnHTML);
+      
+      document.getElementById('blogList').innerHTML = blog1 + blog2;
+    }
+
+    function renderSampleYoutubes() {
+      const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+      const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteSampleCard(this)">삭제</button>` : '';
+
+      const yt1 = createCardHTML("🎥 숲속의 소리 4K", "ASMR 힐링 영상입니다.", null, "https://www.youtube.com/embed/dQw4w9WgXcQ", 25, deleteBtnHTML);
+      const yt2 = createCardHTML("🎥 통나무집 짓기", "자연 친화적 건축 일지", null, "https://www.youtube.com/embed/dQw4w9WgXcQ", 19, deleteBtnHTML);
+
+      document.getElementById('youtubeList').innerHTML = yt1 + yt2;
+    }
+
+    function renderSampleOrData() {
+      loadPublicBoard();
+      loadBlogList();
+      loadYoutubeList();
+    }
+
     function createCardHTML(title, body, imgSrc, ytEmbed, likes = 0, deleteBtnHTML = '') {
       return `
         <div class="card ${ytEmbed ? 'youtube-card' : ''}">
@@ -714,23 +714,10 @@
       `;
     }
 
-    // 초기 화면 실행
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('todayVisitors').textContent = 0;
       document.getElementById('totalVisitors').textContent = 0;
-
-      const blog1 = createCardHTML("🌲 숲속에서의 첫 아침", "새소리와 함께 시작하는 산림살이 이야기...", "https://picsum.photos/400/250?random=1", null, 12);
-      const blog2 = createCardHTML("🌲 자연 속 힐링 스팟", "깊은 산속 오솔길을 따라 걷다 발견한 명소...", "https://picsum.photos/400/250?random=2", null, 8);
-      const yt1 = createCardHTML("🎥 숲속의 소리 4K", "ASMR 힐링 영상입니다.", null, "https://www.youtube.com/embed/dQw4w9WgXcQ", 25);
-      const yt2 = createCardHTML("🎥 통나무집 짓기", "자연 친화적 건축 일지", null, "https://www.youtube.com/embed/dQw4w9WgXcQ", 19);
-
-      document.getElementById('summaryGrid').innerHTML = blog1 + blog2 + yt1 + yt2;
-      document.getElementById('blogList').innerHTML = blog1 + blog2;
-      document.getElementById('youtubeList').innerHTML = yt1 + yt2;
-
-      loadPublicBoard();
-      loadBlogList();
-      loadYoutubeList();
+      renderSampleOrData();
     });
   </script>
 </body>

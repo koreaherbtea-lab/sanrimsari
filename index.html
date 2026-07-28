@@ -82,7 +82,7 @@
       margin-top: 0.8rem !important;
     }
 
-    /* 글 작성 시 미리보기 썸네일 (최대 480*240px 이하) */
+    /* 글 작성 시 미리보기 썸네일 */
     .img-preview {
       display: none;
       max-width: 480px !important;
@@ -274,7 +274,7 @@
     </div>
   </div>
 
-  <!-- 푸터 (카운터 0부터 시작하도록 초기화) -->
+  <!-- 푸터 -->
   <footer>
     <div class="visitor-counter">
       오늘 방문자 수: <strong id="todayVisitors">0</strong>명 | 누적 방문자 수: <strong id="totalVisitors">0</strong>명
@@ -543,7 +543,7 @@
       finally { btn.disabled = false; btn.textContent = "회원 글 남기기"; }
     };
 
-    // 💡 삭제 전 재확인 메세지 강화
+    // 💡 게시글 삭제 함수 모음
     window.deletePublicMemo = async function(id) {
       if (!confirm("정말로 이 게시글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
       try { 
@@ -562,7 +562,27 @@
       } catch(e) { alert("글 삭제 실패: " + e.message); }
     };
 
-    // 💡 소통창 목록 불러오기 (중복 출력 버그 완벽 수정)
+    // 💡 관리자 전용: 블로그 글 삭제 함수
+    window.deleteBlog = async function(id) {
+      if (!confirm("정말로 이 블로그 글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
+      try {
+        await deleteDoc(doc(db, "blogs", id));
+        alert("블로그 글이 삭제되었습니다.");
+        loadBlogList();
+      } catch(e) { alert("블로그 삭제 실패: " + e.message); }
+    };
+
+    // 💡 관리자 전용: 유튜브 영상 삭제 함수
+    window.deleteYoutube = async function(id) {
+      if (!confirm("정말로 이 유튜브 영상을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
+      try {
+        await deleteDoc(doc(db, "youtubes", id));
+        alert("유튜브 영상이 삭제되었습니다.");
+        loadYoutubeList();
+      } catch(e) { alert("유튜브 삭제 실패: " + e.message); }
+    };
+
+    // 소통창 목록 불러오기
     async function loadPublicBoard() {
       const container = document.getElementById('publicBoardList');
       if (!container) return;
@@ -592,11 +612,11 @@
             </div>
           `;
         });
-        container.innerHTML = boardHTML; // 일괄 업데이트로 중복 방지
+        container.innerHTML = boardHTML;
       } catch(e) { console.log(e); }
     }
 
-    // 💡 회원소통창 목록 불러오기 (중복 출력 버그 완벽 수정)
+    // 회원소통창 목록 불러오기
     async function loadMemberBoard() {
       const container = document.getElementById('memberBoardList');
       if (!container) return;
@@ -625,55 +645,64 @@
             </div>
           `;
         });
-        container.innerHTML = boardHTML; // 일괄 업데이트로 중복 방지
+        container.innerHTML = boardHTML;
       } catch(e) { console.log(e); }
     }
 
-    // 블로그 목록 불러오기
+    // 💡 블로그 목록 불러오기 (삭제 버튼 권한 포함)
     async function loadBlogList() {
       const container = document.getElementById('blogList');
       if (!container) return;
       try {
         const q = query(collection(db, "blogs"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
+        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+
         if (!snap.empty) {
           let blogHTML = '';
           snap.forEach(d => {
             const data = d.data();
-            blogHTML += createCardHTML(data.title, data.content, "https://picsum.photos/400/250?random=" + Math.random(), null, 0);
+            const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteBlog('${d.id}')">삭제</button>` : '';
+            blogHTML += createCardHTML(data.title, data.content, "https://picsum.photos/400/250?random=" + Math.random(), null, 0, deleteBtnHTML);
           });
           container.innerHTML = blogHTML;
         }
       } catch(e) { console.log(e); }
     }
 
-    // 유튜브 목록 불러오기
+    // 💡 유튜브 목록 불러오기 (삭제 버튼 권한 포함)
     async function loadYoutubeList() {
       const container = document.getElementById('youtubeList');
       if (!container) return;
       try {
         const q = query(collection(db, "youtubes"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
+        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+
         if (!snap.empty) {
           let ytHTML = '';
           snap.forEach(d => {
             const data = d.data();
-            ytHTML += createCardHTML(data.title, "", null, data.url, 0);
+            const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteYoutube('${d.id}')">삭제</button>` : '';
+            ytHTML += createCardHTML(data.title, "", null, data.url, 0, deleteBtnHTML);
           });
           container.innerHTML = ytHTML;
         }
       } catch(e) { console.log(e); }
     }
 
-    // 카드 생성 HTML 함수
-    function createCardHTML(title, body, imgSrc, ytEmbed, likes = 0) {
+    // 💡 카드 생성 HTML 함수 (제목과 삭제 버튼 정렬 지원)
+    function createCardHTML(title, body, imgSrc, ytEmbed, likes = 0, deleteBtnHTML = '') {
       return `
         <div class="card ${ytEmbed ? 'youtube-card' : ''}">
           <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+              <h3 style="margin:0;">${title}</h3>
+              ${deleteBtnHTML}
+            </div>
             ${imgSrc ? `<img src="${imgSrc}" class="blog-card-image" alt="이미지">` : ''}
             ${ytEmbed ? `<iframe src="${ytEmbed}" allowfullscreen></iframe>` : ''}
-            <h3>${title}</h3>
-            <p style="font-size:0.9rem; color:#4a5568; margin-top:0.5rem;">${body}</p>
+            ${body ? `<p style="font-size:0.9rem; color:#4a5568; margin-top:0.5rem;">${body}</p>` : ''}
           </div>
           <div class="like-container">
             <span class="toast-msg">눌렀어요</span>
@@ -685,7 +714,7 @@
       `;
     }
 
-    // 💡 초기 실행 (방문자 수 0부터 시작)
+    // 초기 화면 실행
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('todayVisitors').textContent = 0;
       document.getElementById('totalVisitors').textContent = 0;

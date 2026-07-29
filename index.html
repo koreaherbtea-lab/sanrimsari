@@ -306,6 +306,12 @@
         ℹ️ 신규 가입 신청 목록입니다. 승인 시 회원소통창 이용이 가능해집니다. '거절'은 가입 신청 정보만 삭제하며, 별도로 Firebase 콘솔에서 인증 계정을 정리해야 완전히 제거됩니다.
       </div>
       <div id="pendingUsersList" style="display:flex; flex-direction:column; gap:1rem;"></div>
+
+      <h2 class="section-title" style="margin-top:2.5rem;">승인된 회원 목록</h2>
+      <div class="warning-box">
+        ℹ️ '탈퇴 처리'를 누르면 이 사이트의 회원 정보(신청 기록)만 삭제되고, 이메일 주소가 클립보드에 복사됩니다. 그 이메일로 <strong>Firebase 콘솔 → Authentication</strong>에서 로그인 계정 자체도 삭제해야 완전히 탈퇴 처리됩니다 (그래야 재로그인/재가입이 불가능해집니다).
+      </div>
+      <div id="approvedUsersList" style="display:flex; flex-direction:column; gap:1rem;"></div>
     </section>
 
   </main>
@@ -735,32 +741,78 @@
       } catch (e) { alert("처리 실패: " + e.message); }
     };
 
+    // 승인된 회원의 이름/이메일을 uid로 조회하기 위한 캐시
+    // (onclick 속성에 이름/이메일 같은 사용자 입력값을 직접 끼워넣지 않기 위해 사용합니다.
+    //  이름에 따옴표 등 특수문자가 있으면 인라인 onclick이 깨지거나 악용될 수 있어, uid만 넘기고 나머지는 여기서 조회합니다.)
+    let approvedUsersCache = {};
+
+    // 관리자: 승인된 회원 탈퇴 처리
+    // 1) Firestore의 회원 정보(users 문서)를 삭제 → 즉시 회원소통창 이용 불가 + 재로그인 시 재가입 신청 화면으로 전환
+    // 2) 이메일을 클립보드에 복사 → 관리자가 Firebase 콘솔 Authentication에서 붙여넣어 계정 자체도 삭제할 수 있도록 안내
+    window.withdrawUser = async function(uid) {
+      const info = approvedUsersCache[uid];
+      if (!info) return alert("회원 정보를 찾을 수 없습니다. 새로고침 후 다시 시도해주세요.");
+      const { email, name } = info;
+      if (!confirm(`정말 '${name}'(${email}) 님을 탈퇴 처리하시겠습니까?\n\n이 사이트의 회원 정보가 삭제됩니다. (로그인 계정 자체는 별도로 Firebase 콘솔에서 삭제해야 합니다.)`)) return;
+      try {
+        await deleteDoc(doc(db, "users", uid));
+        let clipboardMsg = '';
+        try {
+          await navigator.clipboard.writeText(email);
+          clipboardMsg = `\n\n📋 이메일 주소(${email})가 클립보드에 복사되었습니다.`;
+        } catch (clipErr) {
+          clipboardMsg = `\n\n(클립보드 복사는 실패했어요. 이메일을 직접 메모해두세요: ${email})`;
+        }
+        alert(`탈퇴 처리가 완료되었습니다.${clipboardMsg}\n\n이어서 Firebase 콘솔 → Authentication → 사용자 탭에서 이 이메일을 검색해 계정을 삭제해주세요. 그래야 재로그인이 완전히 차단됩니다.`);
+        loadPendingUsers();
+      } catch (e) { alert("탈퇴 처리 실패: " + e.message); }
+    };
+
     async function loadPendingUsers() {
-      const container = document.getElementById('pendingUsersList');
-      if (!container) return;
+      const pendingContainer = document.getElementById('pendingUsersList');
+      const approvedContainer = document.getElementById('approvedUsersList');
+      if (!pendingContainer && !approvedContainer) return;
       try {
         const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
-        let html = '';
+        let pendingHTML = '';
+        let approvedHTML = '';
         snap.forEach(d => {
           const data = d.data();
-          if (data.status !== 'pending') return;
-          html += `
-            <div class="card">
-              <div>
-                <p><strong>${escapeHTML(data.name)}</strong></p>
-                <p>이메일: ${escapeHTML(data.email)}</p>
-                <p>전화번호: ${escapeHTML(data.phone)}</p>
+          const joined = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleDateString() : '';
+          if (data.status === 'pending') {
+            pendingHTML += `
+              <div class="card">
+                <div>
+                  <p><strong>${escapeHTML(data.name)}</strong></p>
+                  <p>이메일: ${escapeHTML(data.email)}</p>
+                  <p>전화번호: ${escapeHTML(data.phone)}</p>
+                </div>
+                <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                  <button class="btn-submit" style="flex:1;" onclick="approveUser('${d.id}')">승인</button>
+                  <button class="btn-delete" style="flex:1;" onclick="rejectUser('${d.id}')">거절</button>
+                </div>
               </div>
-              <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-                <button class="btn-submit" style="flex:1;" onclick="approveUser('${d.id}')">승인</button>
-                <button class="btn-delete" style="flex:1;" onclick="rejectUser('${d.id}')">거절</button>
+            `;
+          } else if (data.status === 'approved') {
+            approvedUsersCache[d.id] = { email: data.email, name: data.name };
+            approvedHTML += `
+              <div class="card">
+                <div>
+                  <p><strong>${escapeHTML(data.name)}</strong> <small style="color:#718096;">(가입일: ${escapeHTML(joined)})</small></p>
+                  <p>이메일: ${escapeHTML(data.email)}</p>
+                  <p>전화번호: ${escapeHTML(data.phone)}</p>
+                </div>
+                <div style="margin-top:1rem;">
+                  <button class="btn-delete" style="width:100%;" onclick="withdrawUser('${d.id}')">탈퇴 처리</button>
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          }
         });
-        container.innerHTML = html || '<p style="color:#718096;">승인 대기 중인 회원이 없습니다.</p>';
-      } catch (e) { console.error("가입 신청 목록 로드 실패:", e); }
+        if (pendingContainer) pendingContainer.innerHTML = pendingHTML || '<p style="color:#718096;">승인 대기 중인 회원이 없습니다.</p>';
+        if (approvedContainer) approvedContainer.innerHTML = approvedHTML || '<p style="color:#718096;">승인된 회원이 없습니다.</p>';
+      } catch (e) { console.error("회원 목록 로드 실패:", e); }
     }
 
     // 관리자 블로그 저장

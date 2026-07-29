@@ -358,6 +358,9 @@
     import { 
       getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp, deleteDoc, doc, getDoc, setDoc 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { 
+      getStorage, ref as storageRef, uploadBytes, getDownloadURL 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAA0_L0NLiUPHyAzWgqgFZaNj7JKpHNsIA",
@@ -372,6 +375,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
     const googleProvider = new GoogleAuthProvider();
     let currentUser = null;
 
@@ -413,9 +417,11 @@
       return url;
     }
 
-    // 이미지 리사이징 처리
-    function processImageFile(file) {
-      return new Promise((resolve) => {
+    // 이미지 리사이징 후 Firebase Storage에 업로드하고 다운로드 URL을 반환합니다.
+    // (예전에는 base64로 변환해 Firestore 문서에 직접 저장했는데, 사진이 크면 Firestore의
+    // 문서당 1MB 용량 제한에 걸려 저장이 실패할 수 있어 Storage 방식으로 변경했습니다.)
+    function processImageFile(file, folder) {
+      return new Promise((resolve, reject) => {
         if (!file) return resolve(null);
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -438,8 +444,18 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            resolve(dataUrl);
+            canvas.toBlob(async (blob) => {
+              if (!blob) return resolve(null);
+              try {
+                const filename = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+                const fileRef = storageRef(storage, filename);
+                await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
+                const url = await getDownloadURL(fileRef);
+                resolve(url);
+              } catch (err) {
+                reject(err);
+              }
+            }, 'image/jpeg', 0.8);
           };
           img.onerror = () => resolve(null);
           img.src = e.target.result;
@@ -747,8 +763,7 @@
       btn.textContent = "저장 중...";
 
       try {
-        const imageUrl = await processImageFile(imageFile);
-        
+        const imageUrl = await processImageFile(imageFile, 'blogs');
         await addDoc(collection(db, "blogs"), { title, content, imageUrl, createdAt: serverTimestamp() });
         alert("블로그 글이 등록되었습니다!");
         
@@ -791,7 +806,7 @@
       btn.disabled = true;
       btn.textContent = "저장 중...";
       try {
-        const imageUrl = await processImageFile(imageFile);
+        const imageUrl = await processImageFile(imageFile, 'publicMemos');
         const uid = currentUser ? currentUser.uid : await ensureAnonAuth();
         await addDoc(collection(db, "publicMemos"), { author, content, uid, imageUrl, createdAt: serverTimestamp() });
         document.getElementById('publicMemo').value = '';
@@ -812,7 +827,7 @@
       btn.disabled = true;
       btn.textContent = "저장 중...";
       try {
-        const imageUrl = await processImageFile(imageFile);
+        const imageUrl = await processImageFile(imageFile, 'memberMemos');
         await addDoc(collection(db, "memberMemos"), {
           author: currentUser.displayName || currentUser.email.split('@')[0],
           content, uid: currentUser.uid, email: currentUser.email, imageUrl, createdAt: serverTimestamp()

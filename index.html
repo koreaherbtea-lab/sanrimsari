@@ -158,6 +158,15 @@
     }
     .btn-delete:hover { background-color: #c53030; }
 
+    /* 페이지네이션 */
+    .pagination { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 1.5rem; }
+    .page-btn {
+      min-width: 36px; height: 36px; padding: 0 0.5rem; border: 1px solid #cbd5e0; background: white;
+      color: var(--dark-text); border-radius: 6px; cursor: pointer; font-weight: 600;
+    }
+    .page-btn:hover { background: #f0f4f0; }
+    .page-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
     /* 모달 창 */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
     .modal.active { display: flex; }
@@ -217,11 +226,13 @@
         
         <label class="file-input-label">📷 블로그 대표 이미지 첨부 (선택):</label>
         <input type="file" id="blogImageInput" accept="image/*" style="padding:0.4rem; background:#f8fafc; border:1px solid #cbd5e0; border-radius:6px;">
+        <small style="color:#a0aec0; margin-top:-0.5rem;">※ 이미지는 최대 1MB까지 첨부 가능합니다. 용량이 크면 자동으로 줄여서 저장을 시도하며, 그래도 크면 안내 메시지가 표시됩니다.</small>
         <img id="blogPreview" class="img-preview" alt="선택한 사진 미리보기">
 
         <button class="btn-submit" id="saveBlogBtn">글 등록하기</button>
       </div>
       <div class="card-grid" id="blogList"></div>
+      <div id="blogPagination"></div>
     </section>
 
     <!-- 유튜브 섹션 -->
@@ -234,6 +245,7 @@
         <button class="btn-submit" id="saveYtBtn">영상 등록하기</button>
       </div>
       <div class="card-grid" id="youtubeList"></div>
+      <div id="youtubePagination"></div>
     </section>
 
     <!-- 일반 소통창 -->
@@ -253,11 +265,13 @@
         
         <label class="file-input-label">📷 이미지 첨부 (최대 480x240px 자동조절):</label>
         <input type="file" id="publicImageInput" accept="image/*" style="padding:0.4rem; background:#f8fafc; border:1px solid #cbd5e0; border-radius:6px;">
+        <small style="color:#a0aec0; margin-top:-0.5rem;">※ 이미지는 최대 1MB까지 첨부 가능합니다.</small>
         <img id="publicPreview" class="img-preview" alt="선택한 사진 미리보기">
         
         <button class="btn-submit" id="postPublicBtn">글 남기기</button>
       </div>
       <div id="publicBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
+      <div id="publicBoardPagination"></div>
     </section>
 
     <!-- 회원 소통창 -->
@@ -276,11 +290,13 @@
         
         <label class="file-input-label">📷 이미지 첨부 (최대 480x240px 자동조절):</label>
         <input type="file" id="memberImageInput" accept="image/*" style="padding:0.4rem; background:#f8fafc; border:1px solid #cbd5e0; border-radius:6px;">
+        <small style="color:#a0aec0; margin-top:-0.5rem;">※ 이미지는 최대 1MB까지 첨부 가능합니다.</small>
         <img id="memberPreview" class="img-preview" alt="선택한 사진 미리보기">
         
         <button class="btn-submit" id="postMemberBtn">회원 글 남기기</button>
       </div>
       <div id="memberBoardList" style="display:flex; flex-direction:column; gap:1rem;"></div>
+      <div id="memberBoardPagination"></div>
     </section>
 
     <!-- 회원가입 승인 관리 (관리자 전용) -->
@@ -356,11 +372,9 @@
       createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
-      getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp, deleteDoc, doc, getDoc, setDoc 
+      getFirestore, collection, addDoc, getDocs, query, orderBy, limit, startAfter, getCountFromServer, 
+      serverTimestamp, deleteDoc, doc, getDoc, setDoc 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { 
-      getStorage, ref as storageRef, uploadBytes, getDownloadURL 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAA0_L0NLiUPHyAzWgqgFZaNj7JKpHNsIA",
@@ -375,7 +389,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app);
     const googleProvider = new GoogleAuthProvider();
     let currentUser = null;
 
@@ -417,10 +430,12 @@
       return url;
     }
 
-    // 이미지 리사이징 후 Firebase Storage에 업로드하고 다운로드 URL을 반환합니다.
-    // (예전에는 base64로 변환해 Firestore 문서에 직접 저장했는데, 사진이 크면 Firestore의
-    // 문서당 1MB 용량 제한에 걸려 저장이 실패할 수 있어 Storage 방식으로 변경했습니다.)
-    function processImageFile(file, folder) {
+    // 이미지를 리사이징한 뒤 base64로 변환해 Firestore 문서에 직접 저장합니다.
+    // Firestore 문서 하나는 최대 1MB까지만 저장 가능하므로, 변환 후 용량이 너무 크면
+    // 저장을 시도하지 않고 사용자에게 명확한 안내 메시지를 보여줍니다.
+    const MAX_IMAGE_BYTES = 900 * 1024; // 여유를 두고 900KB로 제한 (문서의 다른 필드 용량 고려)
+
+    function processImageFile(file) {
       return new Promise((resolve, reject) => {
         if (!file) return resolve(null);
         const reader = new FileReader();
@@ -444,18 +459,16 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            canvas.toBlob(async (blob) => {
-              if (!blob) return resolve(null);
-              try {
-                const filename = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-                const fileRef = storageRef(storage, filename);
-                await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
-                const url = await getDownloadURL(fileRef);
-                resolve(url);
-              } catch (err) {
-                reject(err);
-              }
-            }, 'image/jpeg', 0.8);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+            // base64 문자열 길이 기준 실제 바이트 크기 추정
+            const approxBytes = Math.round((dataUrl.length - 'data:image/jpeg;base64,'.length) * 0.75);
+            if (approxBytes > MAX_IMAGE_BYTES) {
+              reject(new Error(`이미지 용량이 너무 큽니다 (최대 1MB까지 첨부 가능). 더 작은 사진을 선택하거나, 사진 앱에서 용량을 줄인 뒤 다시 시도해주세요.`));
+              return;
+            }
+
+            resolve(dataUrl);
           };
           img.onerror = () => resolve(null);
           img.src = e.target.result;
@@ -763,7 +776,7 @@
       btn.textContent = "저장 중...";
 
       try {
-        const imageUrl = await processImageFile(imageFile, 'blogs');
+        const imageUrl = await processImageFile(imageFile);
         await addDoc(collection(db, "blogs"), { title, content, imageUrl, createdAt: serverTimestamp() });
         alert("블로그 글이 등록되었습니다!");
         
@@ -806,7 +819,7 @@
       btn.disabled = true;
       btn.textContent = "저장 중...";
       try {
-        const imageUrl = await processImageFile(imageFile, 'publicMemos');
+        const imageUrl = await processImageFile(imageFile);
         const uid = currentUser ? currentUser.uid : await ensureAnonAuth();
         await addDoc(collection(db, "publicMemos"), { author, content, uid, imageUrl, createdAt: serverTimestamp() });
         document.getElementById('publicMemo').value = '';
@@ -827,7 +840,7 @@
       btn.disabled = true;
       btn.textContent = "저장 중...";
       try {
-        const imageUrl = await processImageFile(imageFile, 'memberMemos');
+        const imageUrl = await processImageFile(imageFile);
         await addDoc(collection(db, "memberMemos"), {
           author: currentUser.displayName || currentUser.email.split('@')[0],
           content, uid: currentUser.uid, email: currentUser.email, imageUrl, createdAt: serverTimestamp()
@@ -876,106 +889,202 @@
     };
 
     // 데이터 호출
-    async function loadPublicBoard() {
+    // 💡 서버(Firestore) 커서 기반 페이지네이션
+    // 예전 방식: 전체 문서를 한 번에 다 읽어온 뒤 메모리에서 10개씩 잘라 보여줌 (글이 많아지면 최초 로딩이 느려짐)
+    // 지금 방식: 페이지당 딱 10개만 Firestore에 요청. 전체 개수는 저비용 집계 쿼리(getCountFromServer)로만 확인.
+    // 페이지 번호는 지금까지 방문한 페이지의 "커서"를 캐시해뒀다가 재사용하고,
+    // 아직 가보지 않은 먼 페이지로 바로 이동하면 그 사이 구간만 순차적으로 커서를 확보합니다(전체를 읽지 않음).
+    const PAGE_SIZE = 10;
+
+    function buildPageNumberList(current, total) {
+      const pages = [];
+      const w = 2; // 현재 페이지 좌우로 몇 개씩 보여줄지
+      pages.push(1);
+      if (current - w > 2) pages.push('...');
+      for (let p = Math.max(2, current - w); p <= Math.min(total - 1, current + w); p++) pages.push(p);
+      if (current + w < total - 1) pages.push('...');
+      if (total > 1) pages.push(total);
+      return pages;
+    }
+
+    function renderPaginationControls(containerId, totalCount, currentPage, onClickFnName) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+      if (totalPages <= 1) { el.innerHTML = ''; return; }
+      const pages = buildPageNumberList(currentPage, totalPages);
+      let html = '<div class="pagination">';
+      pages.forEach(p => {
+        if (p === '...') { html += `<span class="page-btn" style="border:none; cursor:default;">···</span>`; }
+        else { html += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="${onClickFnName}(${p})">${p}</button>`; }
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    // 컬렉션 하나당 페이지네이션 컨트롤러를 생성합니다.
+    // renderItemsFn(items): 받아온 10개 문서로 목록 화면을 그리는 함수
+    // emptyFn(): 문서가 하나도 없을 때 호출(샘플 데이터 표시 등)
+    function createPaginator(collectionName, paginationContainerId, renderItemsFn, emptyFn) {
+      let cursors = [null];   // cursors[i] = i번째 페이지 마지막 문서(스냅샷). cursors[0]은 항상 null(1페이지는 처음부터).
+      let currentPage = 1;
+      let totalCount = 0;
+      let busy = false;
+
+      function baseQuery(afterDoc) {
+        return afterDoc
+          ? query(collection(db, collectionName), orderBy("createdAt", "desc"), startAfter(afterDoc), limit(PAGE_SIZE))
+          : query(collection(db, collectionName), orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+      }
+
+      async function goToPage(pageNum) {
+        if (busy) return;
+        busy = true;
+        try {
+          // 아직 확보하지 못한 이전 페이지들의 커서를 순차적으로 채워 넣습니다.
+          let snap = null;
+          while (cursors.length <= pageNum) {
+            const afterDoc = cursors[cursors.length - 1];
+            snap = await getDocs(baseQuery(afterDoc));
+            if (snap.empty) break;
+            cursors.push(snap.docs[snap.docs.length - 1]);
+          }
+          // 목표 페이지의 문서가 위 루프에서 이미 조회됐다면 재사용, 아니라면 다시 조회
+          if (!snap || cursors.length - 1 !== pageNum) {
+            snap = await getDocs(baseQuery(cursors[pageNum - 1]));
+          }
+          currentPage = pageNum;
+          const items = [];
+          snap.forEach(d => items.push({ id: d.id, data: d.data() }));
+          renderItemsFn(items);
+          renderPaginationControls(paginationContainerId, totalCount, currentPage, `__paginator_${collectionName}_goToPage`);
+        } catch (e) {
+          console.error(`${collectionName} 페이지 로드 실패:`, e);
+        } finally {
+          busy = false;
+        }
+      }
+
+      async function reload() {
+        try {
+          const countSnap = await getCountFromServer(collection(db, collectionName));
+          totalCount = countSnap.data().count;
+        } catch (e) {
+          console.error(`${collectionName} 개수 조회 실패:`, e);
+          totalCount = 0;
+        }
+        cursors = [null];
+        if (totalCount === 0) {
+          const pgEl = document.getElementById(paginationContainerId);
+          if (pgEl) pgEl.innerHTML = '';
+          if (emptyFn) emptyFn();
+          return;
+        }
+        await goToPage(1);
+      }
+
+      // 페이지 버튼 onclick에서 호출할 수 있도록 전역에 등록
+      window[`__paginator_${collectionName}_goToPage`] = (p) => {
+        goToPage(p);
+        const listEl = document.getElementById(paginationContainerId).previousElementSibling;
+        if (listEl) window.scrollTo({ top: listEl.offsetTop - 100, behavior: 'smooth' });
+      };
+
+      return { reload, goToPage };
+    }
+
+    // ── 소통창(공개) ──────────────────────────────────────
+    function renderPublicBoardItems(items) {
       const container = document.getElementById('publicBoardList');
       if (!container) return;
-      try {
-        const q = query(collection(db, "publicMemos"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        const myUid = auth.currentUser ? auth.currentUser.uid : null;
-        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
-        let boardHTML = '';
-        snap.forEach(d => {
-          const data = d.data();
-          const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
-          const isMyPost = myUid && myUid === data.uid;
-          const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deletePublicMemo('${d.id}')">삭제</button>` : '';
-          const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
-          boardHTML += `
-            <div class="card">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <p><strong>${escapeHTML(data.author || '익명')}</strong> <small>(${escapeHTML(time)})</small></p>
-                ${deleteBtnHTML}
-              </div>
-              ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
-              ${imageHTML}
+      const myUid = auth.currentUser ? auth.currentUser.uid : null;
+      const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+      let boardHTML = '';
+      items.forEach(({ id, data }) => {
+        const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
+        const isMyPost = myUid && myUid === data.uid;
+        const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deletePublicMemo('${id}')">삭제</button>` : '';
+        const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
+        boardHTML += `
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <p><strong>${escapeHTML(data.author || '익명')}</strong> <small>(${escapeHTML(time)})</small></p>
+              ${deleteBtnHTML}
             </div>
-          `;
-        });
-        container.innerHTML = boardHTML;
-      } catch(e) { console.log(e); }
+            ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
+            ${imageHTML}
+          </div>
+        `;
+      });
+      container.innerHTML = boardHTML;
     }
+    const publicBoardPaginator = createPaginator('publicMemos', 'publicBoardPagination', renderPublicBoardItems, () => {
+      document.getElementById('publicBoardList').innerHTML = '';
+    });
+    function loadPublicBoard() { return publicBoardPaginator.reload(); }
 
-    async function loadMemberBoard() {
+    // ── 회원소통창 ──────────────────────────────────────
+    function renderMemberBoardItems(items) {
       const container = document.getElementById('memberBoardList');
       if (!container) return;
-      try {
-        const q = query(collection(db, "memberMemos"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
-        let boardHTML = '';
-        snap.forEach(d => {
-          const data = d.data();
-          const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
-          const isMyPost = currentUser && (currentUser.uid === data.uid || currentUser.email === data.email);
-          const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deleteMemberMemo('${d.id}')">삭제</button>` : '';
-          const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
-          boardHTML += `
-            <div class="card">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <p><strong>${escapeHTML(data.author || '회원')} (회원)</strong> <small>(${escapeHTML(time)})</small></p>
-                ${deleteBtnHTML}
-              </div>
-              ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
-              ${imageHTML}
+      const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+      let boardHTML = '';
+      items.forEach(({ id, data }) => {
+        const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
+        const isMyPost = currentUser && (currentUser.uid === data.uid || currentUser.email === data.email);
+        const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deleteMemberMemo('${id}')">삭제</button>` : '';
+        const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
+        boardHTML += `
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <p><strong>${escapeHTML(data.author || '회원')} (회원)</strong> <small>(${escapeHTML(time)})</small></p>
+              ${deleteBtnHTML}
             </div>
-          `;
-        });
-        container.innerHTML = boardHTML;
-      } catch(e) { console.log(e); }
+            ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
+            ${imageHTML}
+          </div>
+        `;
+      });
+      container.innerHTML = boardHTML;
     }
+    const memberBoardPaginator = createPaginator('memberMemos', 'memberBoardPagination', renderMemberBoardItems, () => {
+      document.getElementById('memberBoardList').innerHTML = '';
+    });
+    function loadMemberBoard() { return memberBoardPaginator.reload(); }
 
-    async function loadBlogList() {
+    // ── 블로그 ──────────────────────────────────────
+    function renderBlogItems(items) {
       const container = document.getElementById('blogList');
       if (!container) return;
-      try {
-        const q = query(collection(db, "blogs"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
-        if (!snap.empty) {
-          let blogHTML = '';
-          snap.forEach(d => {
-            const data = d.data();
-            const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteBlog('${d.id}')">삭제</button>` : '';
-            blogHTML += createCardHTML(data.title, data.content, data.imageUrl || null, null, 0, deleteBtnHTML);
-          });
-          container.innerHTML = blogHTML;
-        } else {
-          renderSampleBlogs();
-        }
-      } catch(e) { console.log(e); }
+      const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+      let blogHTML = '';
+      items.forEach(({ id, data }) => {
+        const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteBlog('${id}')">삭제</button>` : '';
+        blogHTML += createCardHTML(data.title, data.content, data.imageUrl || null, null, 0, deleteBtnHTML);
+      });
+      container.innerHTML = blogHTML;
     }
+    const blogPaginator = createPaginator('blogs', 'blogPagination', renderBlogItems, () => {
+      renderSampleBlogs();
+    });
+    function loadBlogList() { return blogPaginator.reload(); }
 
-    async function loadYoutubeList() {
+    // ── 유튜브 ──────────────────────────────────────
+    function renderYoutubeItems(items) {
       const container = document.getElementById('youtubeList');
       if (!container) return;
-      try {
-        const q = query(collection(db, "youtubes"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
-        if (!snap.empty) {
-          let ytHTML = '';
-          snap.forEach(d => {
-            const data = d.data();
-            const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteYoutube('${d.id}')">삭제</button>` : '';
-            ytHTML += createCardHTML(data.title, "", null, data.url, 0, deleteBtnHTML);
-          });
-          container.innerHTML = ytHTML;
-        } else {
-          renderSampleYoutubes();
-        }
-      } catch(e) { console.log(e); }
+      const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+      let ytHTML = '';
+      items.forEach(({ id, data }) => {
+        const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteYoutube('${id}')">삭제</button>` : '';
+        ytHTML += createCardHTML(data.title, "", null, data.url, 0, deleteBtnHTML);
+      });
+      container.innerHTML = ytHTML;
     }
+    const youtubePaginator = createPaginator('youtubes', 'youtubePagination', renderYoutubeItems, () => {
+      renderSampleYoutubes();
+    });
+    function loadYoutubeList() { return youtubePaginator.reload(); }
 
     // 💡 홈 화면 최신 소식 요약 실시간 불러오기 기능 추가
     async function loadSummaryGrid() {

@@ -352,7 +352,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
-      getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, 
+      getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult, signInWithEmailAndPassword, 
       createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
@@ -606,7 +606,17 @@
       else document.getElementById('loginModal').classList.add('active');
     };
     document.getElementById('closeLoginModal').onclick = () => document.getElementById('loginModal').classList.remove('active');
-    document.getElementById('googleLoginBtn').onclick = () => signInWithRedirect(auth, googleProvider);
+    // 💡 signInWithRedirect 대신 signInWithPopup을 사용합니다.
+    // 리다이렉트 방식은 로그인 화면(firebaseapp.com)과 실제 사이트(예: netlify.app)가 서로 다른
+    // 도메인일 때, 브라우저의 서드파티 저장소 차단 정책으로 로그인 결과가 에러 없이 조용히
+    // 유실되는 경우가 있습니다. 팝업 방식은 같은 창에서 즉시 결과를 받아 이 문제를 피할 수 있습니다.
+    document.getElementById('googleLoginBtn').onclick = () => {
+      signInWithPopup(auth, googleProvider).catch((error) => {
+        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+          alert("Google 로그인 실패: " + error.message);
+        }
+      });
+    };
     document.getElementById('emailLoginBtn').onclick = () => {
       const email = document.getElementById('loginEmail').value;
       const pass = document.getElementById('loginPassword').value;

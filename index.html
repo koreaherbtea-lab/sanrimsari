@@ -1257,6 +1257,9 @@
         const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
         const isMyPost = myUid && myUid === data.uid;
         const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deletePublicMemo('${id}', ${data.commentCount || 0})">삭제</button>` : '';
+        const deleteHintHTML = (isMyPost && !isAdmin && (data.commentCount || 0) > 0)
+          ? `<p style="font-size:0.75rem; color:#a0aec0; margin-top:0.3rem;">🔒 댓글(${data.commentCount}개)이 모두 삭제되어야 글을 삭제할 수 있어요.</p>`
+          : '';
         const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
         boardHTML += `
           <div class="card">
@@ -1264,6 +1267,7 @@
               <p><strong>${escapeHTML(data.author || '익명')}</strong> <small>(${escapeHTML(time)})</small></p>
               ${deleteBtnHTML}
             </div>
+            ${deleteHintHTML}
             ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
             ${imageHTML}
             ${commentSectionHTML('publicMemos', id, data.commentCount)}
@@ -1287,6 +1291,9 @@
         const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
         const isMyPost = currentUser && (currentUser.uid === data.uid || currentUser.email === data.email);
         const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deleteMemberMemo('${id}', ${data.commentCount || 0})">삭제</button>` : '';
+        const deleteHintHTML = (isMyPost && !isAdmin && (data.commentCount || 0) > 0)
+          ? `<p style="font-size:0.75rem; color:#a0aec0; margin-top:0.3rem;">🔒 댓글(${data.commentCount}개)이 모두 삭제되어야 글을 삭제할 수 있어요.</p>`
+          : '';
         const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
         boardHTML += `
           <div class="card">
@@ -1294,6 +1301,7 @@
               <p><strong>${escapeHTML(data.author || '회원')} (회원)</strong> <small>(${escapeHTML(time)})</small></p>
               ${deleteBtnHTML}
             </div>
+            ${deleteHintHTML}
             ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
             ${imageHTML}
             ${commentSectionHTML('memberMemos', id, data.commentCount)}

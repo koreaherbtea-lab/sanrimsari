@@ -167,6 +167,18 @@
     .page-btn:hover { background: #f0f4f0; }
     .page-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
+    /* 댓글 */
+    .comment-toggle-btn {
+      background: none; border: none; color: var(--primary-color); font-weight: 600; cursor: pointer;
+      font-size: 0.9rem; padding: 0.4rem 0; margin-top: 0.6rem;
+    }
+    .comment-toggle-btn:hover { text-decoration: underline; }
+    .comment-box { border-top: 1px solid #edf2f7; margin-top: 0.6rem; padding-top: 0.8rem; }
+    .comment-item { background: #f8fafc; border-radius: 6px; padding: 0.6rem 0.8rem; font-size: 0.9rem; }
+    .comment-item p { margin-top: 0.2rem; white-space: pre-wrap; word-break: break-word; }
+    .comment-input-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+    .comment-input-row input[type="text"] { padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.9rem; }
+
     /* 모달 창 */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
     .modal.active { display: flex; }
@@ -182,7 +194,9 @@
 
   <!-- 헤더 -->
   <header class="header">
-    <div class="logo" role="button" tabindex="0" onclick="showSection('home')" onkeypress="if(event.key==='Enter'||event.key===' ')showSection('home')">🌲 산림살이</div>
+    <div class="logo" role="button" tabindex="0" onclick="showSection('home')" onkeypress="if(event.key==='Enter'||event.key===' ')showSection('home')">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARwAAAEcCAMAAAAiKvvSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAMAUExURQAAAP///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////wc9CwgAAAD/dFJOUwABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAx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" alt="산림살이 로고" style="height:1.35em; width:auto; vertical-align:middle; margin-right:0.7rem; margin-top:-0.2rem;">산림살이
+    </div>
     <button class="menu-toggle" id="menuToggle">☰</button>
     <nav class="nav-menu" id="navMenu">
       <button class="nav-link" onclick="showSection('intro')">소개</button>
@@ -312,6 +326,24 @@
         ℹ️ '탈퇴 처리'를 누르면 이 사이트의 회원 정보(신청 기록)만 삭제되고, 이메일 주소가 클립보드에 복사됩니다. 그 이메일로 <strong>Firebase 콘솔 → Authentication</strong>에서 로그인 계정 자체도 삭제해야 완전히 탈퇴 처리됩니다 (그래야 재로그인/재가입이 불가능해집니다).
       </div>
       <div id="approvedUsersList" style="display:flex; flex-direction:column; gap:1rem;"></div>
+
+      <!-- 탈퇴 처리 후 뜨는 안내 박스: alert()과 달리 닫기 전까지 화면에 계속 남아있습니다 -->
+      <div id="withdrawGuideBox" style="display:none; margin-top:1.5rem; background:#fffbea; border:1px solid #f6e05e; border-radius:8px; padding:1.2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#975a16;">✅ 사이트 내 탈퇴 처리 완료 — 아래 순서로 로그인 계정도 마저 삭제해주세요</strong>
+          <span style="cursor:pointer; font-size:1.2rem; color:#975a16;" onclick="document.getElementById('withdrawGuideBox').style.display='none';">&times;</span>
+        </div>
+        <ol style="margin:0.8rem 0 0.8rem 1.2rem; color:#744210; line-height:1.7;">
+          <li>아래 이메일 주소를 복사(자동으로 이미 클립보드에 복사됨)</li>
+          <li>Firebase 콘솔 접속 → <strong>Authentication</strong> → 상단 <strong>"사용자"</strong> 탭 이동</li>
+          <li>검색창 클릭 → <strong>Ctrl+V(붙여넣기)</strong>로 이메일 검색</li>
+          <li>해당 계정 오른쪽 점 3개(⋮) 메뉴 → <strong>"계정 삭제"</strong> 클릭</li>
+        </ol>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <input id="withdrawGuideEmail" type="text" readonly style="flex:1; padding:0.5rem; border-radius:6px; border:1px solid #f6e05e; background:white;">
+          <button class="btn-submit" style="padding:0.5rem 1rem;" onclick="copyWithdrawEmail()">복사</button>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -379,7 +411,7 @@
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
       getFirestore, collection, addDoc, getDocs, query, orderBy, limit, startAfter, getCountFromServer, 
-      serverTimestamp, deleteDoc, doc, getDoc, setDoc 
+      serverTimestamp, deleteDoc, doc, getDoc, setDoc, updateDoc, increment 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -756,16 +788,27 @@
       if (!confirm(`정말 '${name}'(${email}) 님을 탈퇴 처리하시겠습니까?\n\n이 사이트의 회원 정보가 삭제됩니다. (로그인 계정 자체는 별도로 Firebase 콘솔에서 삭제해야 합니다.)`)) return;
       try {
         await deleteDoc(doc(db, "users", uid));
-        let clipboardMsg = '';
-        try {
-          await navigator.clipboard.writeText(email);
-          clipboardMsg = `\n\n📋 이메일 주소(${email})가 클립보드에 복사되었습니다.`;
-        } catch (clipErr) {
-          clipboardMsg = `\n\n(클립보드 복사는 실패했어요. 이메일을 직접 메모해두세요: ${email})`;
-        }
-        alert(`탈퇴 처리가 완료되었습니다.${clipboardMsg}\n\n이어서 Firebase 콘솔 → Authentication → 사용자 탭에서 이 이메일을 검색해 계정을 삭제해주세요. 그래야 재로그인이 완전히 차단됩니다.`);
+        try { await navigator.clipboard.writeText(email); } catch (clipErr) { /* 복사 실패해도 아래 안내 박스에 이메일이 그대로 보이므로 문제 없음 */ }
+
+        // alert()은 확인을 누르면 바로 사라져 안내를 놓치기 쉬우므로,
+        // 닫기 전까지 화면에 계속 남아있는 안내 박스에 다음 할 일을 표시합니다.
+        document.getElementById('withdrawGuideEmail').value = email;
+        document.getElementById('withdrawGuideBox').style.display = 'block';
+        document.getElementById('withdrawGuideBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
         loadPendingUsers();
       } catch (e) { alert("탈퇴 처리 실패: " + e.message); }
+    };
+
+    window.copyWithdrawEmail = async function() {
+      const input = document.getElementById('withdrawGuideEmail');
+      try {
+        await navigator.clipboard.writeText(input.value);
+        alert("이메일이 복사되었습니다.");
+      } catch (e) {
+        input.select();
+        alert("자동 복사에 실패했습니다. 입력창의 텍스트가 선택되어 있으니 Ctrl+C로 복사해주세요.");
+      }
     };
 
     async function loadPendingUsers() {
@@ -1045,6 +1088,112 @@
       return { reload, goToPage };
     }
 
+    // ── 댓글 공용 함수 ──────────────────────────────────────
+    // collectionName: 'publicMemos' | 'memberMemos', postId: 부모 글 id
+    function commentSectionHTML(collectionName, postId, commentCount) {
+      const key = `${collectionName}-${postId}`;
+      const authorFieldHTML = collectionName === 'publicMemos'
+        ? `<input type="text" id="commentAuthor-${key}" placeholder="이름" style="width:90px;">`
+        : '';
+      return `
+        <button class="comment-toggle-btn" id="commentToggleBtn-${key}" onclick="toggleComments('${collectionName}','${postId}')">💬 댓글 ${commentCount || 0}개 보기</button>
+        <div class="comment-box" id="commentBox-${key}" style="display:none;">
+          <div id="commentList-${key}" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+          <div class="comment-input-row">
+            ${authorFieldHTML}
+            <input type="text" id="commentInput-${key}" placeholder="댓글을 입력하세요" style="flex:1;">
+            <button class="btn-submit" style="padding:0.5rem 1rem;" onclick="submitComment('${collectionName}','${postId}')">등록</button>
+          </div>
+        </div>
+      `;
+    }
+
+    window.toggleComments = async function(collectionName, postId) {
+      const key = `${collectionName}-${postId}`;
+      const box = document.getElementById(`commentBox-${key}`);
+      if (!box) return;
+      const wasHidden = box.style.display === 'none';
+      box.style.display = wasHidden ? 'block' : 'none';
+      if (wasHidden) await loadComments(collectionName, postId);
+    };
+
+    async function loadComments(collectionName, postId) {
+      const key = `${collectionName}-${postId}`;
+      const listEl = document.getElementById(`commentList-${key}`);
+      const toggleBtn = document.getElementById(`commentToggleBtn-${key}`);
+      if (!listEl) return;
+      listEl.innerHTML = '<p style="color:#a0aec0; font-size:0.85rem;">불러오는 중...</p>';
+      try {
+        const q = query(collection(db, collectionName, postId, 'comments'), orderBy('createdAt', 'asc'));
+        const snap = await getDocs(q);
+        const myUid = auth.currentUser ? auth.currentUser.uid : null;
+        const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+        let html = '';
+        snap.forEach(d => {
+          const c = d.data();
+          const time = c.createdAt ? new Date(c.createdAt.toDate()).toLocaleString() : '방금 전';
+          const isMine = myUid && myUid === c.uid;
+          const delBtn = (isMine || isAdmin)
+            ? `<button class="btn-delete" style="padding:0.15rem 0.5rem; font-size:0.75rem;" onclick="deleteComment('${collectionName}','${postId}','${d.id}')">삭제</button>`
+            : '';
+          html += `
+            <div class="comment-item">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>${escapeHTML(c.author || '익명')}</strong>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <small style="color:#a0aec0;">${escapeHTML(time)}</small>
+                  ${delBtn}
+                </div>
+              </div>
+              <p>${escapeHTML(c.content)}</p>
+            </div>
+          `;
+        });
+        listEl.innerHTML = html || '<p style="color:#a0aec0; font-size:0.85rem;">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</p>';
+        if (toggleBtn) toggleBtn.textContent = `💬 댓글 ${snap.size}개 보기`;
+      } catch (e) {
+        listEl.innerHTML = '<p style="color:#e53e3e; font-size:0.85rem;">댓글을 불러오지 못했습니다.</p>';
+        console.error('댓글 로드 실패:', e);
+      }
+    }
+
+    window.submitComment = async function(collectionName, postId) {
+      const key = `${collectionName}-${postId}`;
+      const inputEl = document.getElementById(`commentInput-${key}`);
+      const content = inputEl.value.trim();
+      if (!content) return alert('댓글 내용을 입력해주세요.');
+
+      let author;
+      if (collectionName === 'publicMemos') {
+        const authorEl = document.getElementById(`commentAuthor-${key}`);
+        author = authorEl.value.trim() || '익명';
+      } else {
+        if (!currentUser) return alert('로그인이 필요합니다.');
+        author = currentUser.displayName || currentUser.email || '회원';
+      }
+
+      try {
+        const uid = currentUser ? currentUser.uid : await ensureAnonAuth();
+        await addDoc(collection(db, collectionName, postId, 'comments'), { author, content, uid, createdAt: serverTimestamp() });
+        await updateDoc(doc(db, collectionName, postId), { commentCount: increment(1) });
+        inputEl.value = '';
+        await loadComments(collectionName, postId);
+      } catch (e) {
+        alert('댓글 등록 실패: ' + e.message);
+      }
+    };
+
+    window.deleteComment = async function(collectionName, postId, commentId) {
+      if (!confirm('이 댓글을 삭제하시겠습니까?')) return;
+      try {
+        await deleteDoc(doc(db, collectionName, postId, 'comments', commentId));
+        await updateDoc(doc(db, collectionName, postId), { commentCount: increment(-1) });
+        await loadComments(collectionName, postId);
+      } catch (e) {
+        alert('댓글 삭제 실패: ' + e.message);
+      }
+    };
+
     // ── 소통창(공개) ──────────────────────────────────────
     function renderPublicBoardItems(items) {
       const container = document.getElementById('publicBoardList');
@@ -1065,6 +1214,7 @@
             </div>
             ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
             ${imageHTML}
+            ${commentSectionHTML('publicMemos', id, data.commentCount)}
           </div>
         `;
       });
@@ -1094,6 +1244,7 @@
             </div>
             ${data.content ? `<p style="margin-top:0.5rem;">${escapeHTML(data.content)}</p>` : ''}
             ${imageHTML}
+            ${commentSectionHTML('memberMemos', id, data.commentCount)}
           </div>
         `;
       });

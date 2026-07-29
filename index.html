@@ -411,7 +411,7 @@
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
       getFirestore, collection, addDoc, getDocs, query, orderBy, limit, startAfter, getCountFromServer, 
-      serverTimestamp, deleteDoc, doc, getDoc, setDoc, updateDoc, increment 
+      serverTimestamp, deleteDoc, doc, getDoc, setDoc, updateDoc, increment, writeBatch 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -950,13 +950,65 @@
     };
 
     // 게시글 삭제 함수들
-    window.deletePublicMemo = async function(id) {
-      if (!confirm("정말로 이 게시글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
-      try { await deleteDoc(doc(db, "publicMemos", id)); alert("글이 삭제되었습니다."); loadPublicBoard(); } catch(e) { alert("글 삭제 실패: " + e.message); }
+    // 💡 글 삭제 정책
+    // - 일반 사용자(글쓴이): 댓글이 하나라도 남아있으면 삭제 불가. 댓글 작성자들이 각자 자기 댓글을
+    //   먼저 지운 뒤(댓글 0개)에만 글을 삭제할 수 있습니다. (남의 댓글을 마음대로 지울 권한은 없음)
+    // - 관리자: 댓글이 남아있어도 글과 댓글을 한 번에 강제로 모두 삭제할 수 있습니다(운영 목적).
+    window.deletePublicMemo = async function(id, commentCount) {
+      const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+      commentCount = commentCount || 0;
+
+      if (!isAdmin && commentCount > 0) {
+        return alert(`이 글에는 아직 삭제되지 않은 댓글이 ${commentCount}개 있습니다.\n댓글 작성자가 각자 자신의 댓글을 먼저 삭제해야 글을 삭제할 수 있습니다.`);
+      }
+
+      if (!confirm(isAdmin && commentCount > 0
+        ? `정말로 이 게시글을 삭제하시겠습니까?\n관리자 권한으로 댓글 ${commentCount}개도 함께 삭제됩니다. 삭제 후에는 복구할 수 없습니다.`
+        : "정말로 이 게시글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
+
+      try {
+        if (isAdmin && commentCount > 0) {
+          // 관리자 강제 삭제: 남아있는 댓글까지 한 번에 일괄(원자적) 삭제
+          const commentsSnap = await getDocs(collection(db, "publicMemos", id, "comments"));
+          const batch = writeBatch(db);
+          commentsSnap.forEach(c => batch.delete(c.ref));
+          batch.delete(doc(db, "publicMemos", id));
+          await batch.commit();
+          alert(`글과 댓글 ${commentsSnap.size}개가 모두 삭제되었습니다.`);
+        } else {
+          // 댓글이 이미 0개인 경우: 글만 삭제
+          await deleteDoc(doc(db, "publicMemos", id));
+          alert("글이 삭제되었습니다.");
+        }
+        loadPublicBoard();
+      } catch (e) { alert("글 삭제 실패: " + e.message); }
     };
-    window.deleteMemberMemo = async function(id) {
-      if (!confirm("정말로 이 게시글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
-      try { await deleteDoc(doc(db, "memberMemos", id)); alert("글이 삭제되었습니다."); loadMemberBoard(); } catch(e) { alert("글 삭제 실패: " + e.message); }
+    window.deleteMemberMemo = async function(id, commentCount) {
+      const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+      commentCount = commentCount || 0;
+
+      if (!isAdmin && commentCount > 0) {
+        return alert(`이 글에는 아직 삭제되지 않은 댓글이 ${commentCount}개 있습니다.\n댓글 작성자가 각자 자신의 댓글을 먼저 삭제해야 글을 삭제할 수 있습니다.`);
+      }
+
+      if (!confirm(isAdmin && commentCount > 0
+        ? `정말로 이 게시글을 삭제하시겠습니까?\n관리자 권한으로 댓글 ${commentCount}개도 함께 삭제됩니다. 삭제 후에는 복구할 수 없습니다.`
+        : "정말로 이 게시글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
+
+      try {
+        if (isAdmin && commentCount > 0) {
+          const commentsSnap = await getDocs(collection(db, "memberMemos", id, "comments"));
+          const batch = writeBatch(db);
+          commentsSnap.forEach(c => batch.delete(c.ref));
+          batch.delete(doc(db, "memberMemos", id));
+          await batch.commit();
+          alert(`글과 댓글 ${commentsSnap.size}개가 모두 삭제되었습니다.`);
+        } else {
+          await deleteDoc(doc(db, "memberMemos", id));
+          alert("글이 삭제되었습니다.");
+        }
+        loadMemberBoard();
+      } catch (e) { alert("글 삭제 실패: " + e.message); }
     };
     window.deleteBlog = async function(id) {
       if (!confirm("정말로 이 블로그 글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
@@ -1204,7 +1256,7 @@
       items.forEach(({ id, data }) => {
         const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
         const isMyPost = myUid && myUid === data.uid;
-        const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deletePublicMemo('${id}')">삭제</button>` : '';
+        const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deletePublicMemo('${id}', ${data.commentCount || 0})">삭제</button>` : '';
         const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
         boardHTML += `
           <div class="card">
@@ -1234,7 +1286,7 @@
       items.forEach(({ id, data }) => {
         const time = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleString() : "방금 전";
         const isMyPost = currentUser && (currentUser.uid === data.uid || currentUser.email === data.email);
-        const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deleteMemberMemo('${id}')">삭제</button>` : '';
+        const deleteBtnHTML = (isMyPost || isAdmin) ? `<button class="btn-delete" onclick="deleteMemberMemo('${id}', ${data.commentCount || 0})">삭제</button>` : '';
         const imageHTML = data.imageUrl ? `<img src="${escapeHTML(data.imageUrl)}" class="post-img" alt="첨부 사진">` : '';
         boardHTML += `
           <div class="card">

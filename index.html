@@ -1011,10 +1011,14 @@
       } catch (e) { alert("글 삭제 실패: " + e.message); }
     };
     window.deleteBlog = async function(id) {
-      if (!confirm("정말로 이 블로그 글을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
+      if (!confirm("정말로 이 블로그 글을 삭제하시겠습니까?\n이 글에 달린 댓글도 모두 함께 삭제되며, 삭제 후에는 복구할 수 없습니다.")) return;
       try { 
-        await deleteDoc(doc(db, "blogs", id)); 
-        alert("블로그 글이 삭제되었습니다."); 
+        const commentsSnap = await getDocs(collection(db, "blogs", id, "comments"));
+        const batch = writeBatch(db);
+        commentsSnap.forEach(c => batch.delete(c.ref));
+        batch.delete(doc(db, "blogs", id));
+        await batch.commit();
+        alert(`블로그 글과 댓글 ${commentsSnap.size}개가 모두 삭제되었습니다.`); 
         loadBlogList(); 
         loadSummaryGrid(); 
       } catch(e) { alert("블로그 삭제 실패: " + e.message); }
@@ -1323,7 +1327,7 @@
       let blogHTML = '';
       items.forEach(({ id, data }) => {
         const deleteBtnHTML = isAdmin ? `<button class="btn-delete" onclick="deleteBlog('${id}')">삭제</button>` : '';
-        blogHTML += createCardHTML(data.title, data.content, data.imageUrl || null, null, 0, deleteBtnHTML);
+        blogHTML += createCardHTML(data.title, data.content, data.imageUrl || null, null, 0, deleteBtnHTML, commentSectionHTML('blogs', id, data.commentCount));
       });
       container.innerHTML = blogHTML;
     }
@@ -1474,7 +1478,7 @@
       handleVisitorCounter();
     }
 
-    function createCardHTML(title, body, imgSrc, ytEmbed, likes = 0, deleteBtnHTML = '') {
+    function createCardHTML(title, body, imgSrc, ytEmbed, likes = 0, deleteBtnHTML = '', extraHTML = '') {
       const safeTitle = escapeHTML(title);
       return `
         <div class="card ${ytEmbed ? 'youtube-card' : ''}">
@@ -1486,6 +1490,7 @@
             ${imgSrc ? `<img src="${escapeHTML(imgSrc)}" class="blog-card-image" alt="이미지">` : ''}
             ${ytEmbed ? `<iframe src="${escapeHTML(ytEmbed)}" title="${safeTitle}" loading="lazy" frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>` : ''}
             ${body ? `<p style="font-size:1rem; color:#4a5568; margin-top:0.5rem;">${escapeHTML(body)}</p>` : ''}
+            ${extraHTML}
           </div>
           <div class="like-container">
             <span class="toast-msg">눌렀어요</span>
